@@ -1,0 +1,23 @@
+{
+  "name": "my-web-platform",
+  "version": "1.0.0",
+  "description": "Second-hand trading platform for apartment tenants - CSC 4710 Database Systems Project",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zzhu1622/my-web-platform.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zzhu1622/my-web-platform/issues"
+  },
+  "homepage": "https://github.com/zzhu1622/my-web-platform#readme"
+}
