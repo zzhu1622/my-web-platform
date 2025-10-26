@@ -19,9 +19,11 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
+const listingRoutes = require('./routes/listingRoutes');
 
 // Use routes
 app.use('/api/auth', authRoutes);
+app.use('/api/listings', listingRoutes);
 
 // Test Route
 app.get('/api/test', (req, res) => {

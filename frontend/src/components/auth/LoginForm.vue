@@ -69,11 +69,13 @@
 
 <script>
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import authService from '../../services/authService';
 
 export default {
   name: 'LoginForm',
   setup() {
+    const router = useRouter();
     const identifier = ref('');
     const password = ref('');
     const errorMessage = ref('');
@@ -98,22 +100,21 @@ export default {
         const response = await authService.login(identifier.value, password.value);
 
         if (response.success) {
-          successMessage.value = response.message;
-
-          // Store user info in localStorage
+          // Store user information in browser's local storage
           localStorage.setItem('user', JSON.stringify(response.user));
           localStorage.setItem('isLoggedIn', 'true');
 
-          // Clear form
+          // Display success message temporarily
+          successMessage.value = response.message;
+
+          // Clear form fields
           identifier.value = '';
           password.value = '';
 
-          // Redirect after 1.5 seconds
+          // Wait 1 second then redirect to homepage
           setTimeout(() => {
-            // For now, just show success
-            // Later: this.$router.push('/dashboard');
-            console.log('User logged in:', response.user);
-          }, 1500);
+            router.push('/home');
+          }, 1000);
         } else {
           errorMessage.value = response.message;
         }
