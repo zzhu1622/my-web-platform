@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const helmet = require('helmet');
+const database = require('./config/database');
 
 const app = express();
 
@@ -16,9 +17,15 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Import routes
+const authRoutes = require('./routes/authRoutes');
+
+// Use routes
+app.use('/api/auth', authRoutes);
+
 // Test Route
 app.get('/api/test', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'Backend is running!',
     timestamp: new Date().toISOString()
   });
