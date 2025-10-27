@@ -1,8 +1,8 @@
 <template>
   <div class="login-container">
     <div class="login-box">
-      <h1 class="login-title">Trading Platform</h1>
-      <p class="login-subtitle">Second-Hand Marketplace</p>
+      <h1 class="login-title">AptExchange</h1>
+      <p class="login-subtitle">Marketplace for residents living</p>
 
       <!-- Login Form -->
       <form @submit.prevent="handleLogin">

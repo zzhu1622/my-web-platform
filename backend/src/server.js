@@ -5,6 +5,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const helmet = require('helmet');
 const database = require('./config/database');
+const path = require('path');
 
 const app = express();
 
@@ -16,14 +17,17 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use('/api/images', express.static(path.join(__dirname, '../../Database/photo')));
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
 const listingRoutes = require('./routes/listingRoutes');
+const imageRoutes = require('./routes/imageRoutes');
 
 // Use routes
 app.use('/api/auth', authRoutes);
 app.use('/api/listings', listingRoutes);
+app.use('/api/images', imageRoutes);
 
 // Test Route
 app.get('/api/test', (req, res) => {

@@ -18,6 +18,7 @@ exports.getAllListings = async (req, res) => {
 
         try {
             // SQL query to fetch listings with related information
+            // ORDER BY m.created_at ensures consistent image ordering
             const query = `
                 SELECT
                     l.ListID,
@@ -33,7 +34,7 @@ exports.getAllListings = async (req, res) => {
                          JOIN User u ON l.UID = u.UID
                          LEFT JOIN ListingMedia m ON l.ListID = m.ListID AND m.media_type = 'image'
                 WHERE l.status = 'active'
-                ORDER BY l.created_at DESC
+                ORDER BY l.created_at DESC, m.created_at ASC
                     LIMIT 50
             `;
 
@@ -52,12 +53,20 @@ exports.getAllListings = async (req, res) => {
                         status: row.status,
                         expire_date: row.expire_date,
                         seller_name: row.seller_name,
-                        images: []
+                        images: [],
+                        cover_image: null  // Explicitly set cover image
                     });
                 }
                 // Add image URL to listing's image array
                 if (row.image_url) {
                     listingsMap.get(row.ListID).images.push(row.image_url);
+                }
+            });
+
+            // Set cover_image to first image in array
+            listingsMap.forEach(listing => {
+                if (listing.images.length > 0) {
+                    listing.cover_image = listing.images[0];
                 }
             });
 
@@ -106,6 +115,7 @@ exports.getListingById = async (req, res) => {
 
         try {
             // Query to fetch specific listing with all details
+            // ORDER BY m.created_at ensures consistent media ordering
             const query = `
                 SELECT
                     l.ListID,
@@ -127,6 +137,7 @@ exports.getListingById = async (req, res) => {
                          JOIN User u ON l.UID = u.UID
                          LEFT JOIN ListingMedia m ON l.ListID = m.ListID
                 WHERE l.ListID = ? AND l.status = 'active'
+                ORDER BY m.created_at ASC
             `;
 
             const [rows] = await connection.execute(query, [listingId]);
@@ -157,7 +168,8 @@ exports.getListingById = async (req, res) => {
                     email: firstRow.seller_email
                 },
                 images: [],
-                videos: []
+                videos: [],
+                cover_image: null  // Explicitly set cover image
             };
 
             // Separate images and videos into different arrays
@@ -170,6 +182,11 @@ exports.getListingById = async (req, res) => {
                     }
                 }
             });
+
+            // Set cover image to first image
+            if (listing.images.length > 0) {
+                listing.cover_image = listing.images[0];
+            }
 
             return res.status(200).json({
                 success: true,
@@ -213,6 +230,7 @@ exports.getUserListings = async (req, res) => {
 
         try {
             // Query to fetch all listings posted by a specific user
+            // ORDER BY m.created_at ensures consistent image ordering
             const query = `
                 SELECT
                     l.ListID,
@@ -223,12 +241,12 @@ exports.getUserListings = async (req, res) => {
                     l.expire_date,
                     u.name as seller_name,
                     m.url as image_url
-                FROM listing l
+                FROM Listing l
                          JOIN Item i ON l.ItemID = i.ItemID
                          JOIN User u ON l.UID = u.UID
                          LEFT JOIN ListingMedia m ON l.ListID = m.ListID AND m.media_type = 'image'
                 WHERE l.UID = ?
-                ORDER BY l.created_at DESC
+                ORDER BY l.created_at DESC, m.created_at ASC
             `;
 
             const [rows] = await connection.execute(query, [userId]);
@@ -246,11 +264,19 @@ exports.getUserListings = async (req, res) => {
                         status: row.status,
                         expire_date: row.expire_date,
                         seller_name: row.seller_name,
-                        images: []
+                        images: [],
+                        cover_image: null  // Explicitly set cover image
                     });
                 }
                 if (row.image_url) {
                     listingsMap.get(row.ListID).images.push(row.image_url);
+                }
+            });
+
+            // Set cover_image to first image in array
+            listingsMap.forEach(listing => {
+                if (listing.images.length > 0) {
+                    listing.cover_image = listing.images[0];
                 }
             });
 
