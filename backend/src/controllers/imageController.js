@@ -24,7 +24,8 @@ exports.getImage = async (req, res) => {
         // Get the backend directory first
         const backendDir = path.dirname(__dirname);
         const projectDir = path.dirname(backendDir);
-        const imagePath = path.resolve(__dirname, '../../../../Database/photo', filename);
+        const imagesDir = path.resolve(__dirname, '../../Database/photo');
+        const imagePath = path.join(imagesDir, filename);
 
         console.log('Full image path:', imagePath);
         console.log('File exists:', fs.existsSync(imagePath));

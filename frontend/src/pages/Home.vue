@@ -117,23 +117,28 @@
         >
 
           <!-- Product Image Container -->
-          <div class="relative overflow-hidden bg-gray-200 h-64">
+          <div class="group relative overflow-hidden bg-gray-200 h-64">
             <!-- Product Image -->
             <img
-              :src="listing.images[0]"
-              :alt="listing.title"
-              class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+              :src="listing.images?.[0] || '/placeholder.png'"
+              :alt="listing.title || 'Product image'"
+              class="relative z-10 w-full h-full object-cover transition duration-300 group-hover:scale-105"
               @click="viewListing(listing.ListID)"
             />
 
-            <!-- Days Remaining Badge: Shows expiration countdown in top-right corner -->
-            <div class="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+            <!-- Days Remaining Badge -->
+            <div
+              class="absolute z-20 top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold"
+            >
               Only {{ daysRemaining(listing.expire_date) }} days left
             </div>
 
-            <!-- Hover Overlay: Darkens image slightly on mouse hover -->
-            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition duration-200"></div>
+            <!-- Hover Overlay (behind the image, non-interactive) -->
+            <div
+              class="absolute z-0 inset-0 pointer-events-none bg-black/0 group-hover:bg-black/20 transition duration-200"
+            ></div>
           </div>
+
 
           <!-- Product Information Section -->
           <div class="p-4">
