@@ -22,6 +22,7 @@ const authRoutes = require('./routes/authRoutes');
 const listingRoutes = require('./routes/listingRoutes');
 const imageRoutes = require('./routes/imageRoutes');
 
+
 // Import session tracking (only if files exist and are created)
 let sessionRoutes;
 let extractClientInfo;
@@ -35,6 +36,8 @@ try {
   console.warn('Session tracking files not found - skipping session routes');
   console.warn('Create sessionRoutes.js and sessionMiddleware.js to enable session tracking');
 }
+
+const passwordResetRoutes = require('./routes/passwordResetRoutes');
 
 // Middleware
 app.use(helmet({
@@ -66,6 +69,8 @@ app.use('/api/images', imageRoutes);
 if (sessionRoutes) {
   app.use('/api/session', sessionRoutes);
 }
+
+app.use('/api/auth', passwordResetRoutes);
 
 // Test Route
 app.get('/api/test', (req, res) => {

@@ -21,6 +21,8 @@
   },
   "homepage": "https://github.com/zzhu1622/my-web-platform#readme",
   "dependencies": {
-    "axios": "^1.12.2"
+    "axios": "^1.12.2",
+    "bcrypt": "^6.0.0",
+    "nodemailer": "^7.0.10"
   }
 }
