@@ -72,6 +72,18 @@
               My Orders
             </button>
 
+            <!-- Post Listing Option (New Feature) -->
+            <button
+              @click="handleMenuClick('postlisting')"
+              class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2 transition duration-150 text-gray-900 border-t border-gray-200"
+            >
+              <!-- Plus Icon SVG for creating a new listing -->
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Post Listing
+            </button>
+
             <!-- Logout Option -->
             <button
               @click="handleMenuClick('logout')"
@@ -265,32 +277,43 @@ const daysRemaining = (expireDate) => {
 };
 
 // Function: Handle user menu click events
+// Processes all dropdown menu interactions and initiates navigation
 const handleMenuClick = (action) => {
-  // Close dropdown menu
+  // Close dropdown menu after user selects an option
   showUserMenu.value = false;
 
-  // Process menu action based on selection
+  // Process menu action based on selection and route accordingly
   switch (action) {
     case 'account':
-      // Route to account dashboard (reserved for later implementation)
+      // Route to account dashboard where user can manage profile information
+      // Reserved for later implementation
       console.log('Navigating to My Account');
       // router.push('/account');
       break;
 
     case 'messages':
-      // Route to messages page (reserved for later implementation)
+      // Route to messages page where user can view all conversations
+      // Reserved for later implementation
       console.log('Navigating to My Messages');
       // router.push('/messages');
       break;
 
     case 'orders':
-      // Route to orders page (reserved for later implementation)
+      // Route to orders page where user can view purchase history
+      // Reserved for later implementation
       console.log('Navigating to My Orders');
       // router.push('/orders');
       break;
 
+    case 'postlisting':
+      // Route to post listing form where user can create new marketplace listing
+      // Reserved for later implementation
+      console.log('Navigating to Post Listing');
+      // router.push('/post-listing');
+      break;
+
     case 'logout':
-      // Perform logout and return to login page
+      // Perform logout operation and return to login page
       handleLogout();
       break;
 
@@ -300,55 +323,61 @@ const handleMenuClick = (action) => {
 };
 
 // Function: Handle logout and redirect to login page
+// Clears all user session data and authentication tokens
 const handleLogout = () => {
-  // Clear user data from local storage
+  // Clear user data from browser local storage
   authService.logout();
 
-  // Redirect to login page
+  // Redirect to login page after logout
   router.push('/');
 };
 
-// Function: Navigate to product details page (reserved for later)
+// Function: Navigate to product details page
+// Reserved for later implementation when product detail page is ready
 const viewListing = (listingId) => {
   // This functionality is reserved for later implementation
+  // Currently logs listing ID for debugging and development purposes
   console.log('View listing details for ListID:', listingId);
   // router.push(`/listing/${listingId}`);
 };
 
-// Function: Navigate to messaging page (reserved for later)
+// Function: Navigate to messaging page for seller contact
+// Reserved for later implementation when messaging system is ready
 const messageSeller = (sellerName, listingId) => {
   // This functionality is reserved for later implementation
+  // Currently logs seller information and listing ID for debugging and development
   console.log('Message seller:', sellerName, 'for listing:', listingId);
   // router.push(`/message/${listingId}`);
 };
 
 // Lifecycle Hook: Runs when component is mounted to DOM
+// Initializes component by loading user data and fetching listings
 onMounted(async () => {
-  // Retrieve user data from browser's local storage
+  // Retrieve user data from browser local storage to check login status
   const storedUser = localStorage.getItem('user');
 
   if (storedUser) {
-    // Parse stored JSON and load user data into component state
+    // Parse stored JSON string and load user data into component state
     user.value = JSON.parse(storedUser);
   } else {
-    // User is not logged in, redirect to login page
+    // User is not logged in, redirect to login page immediately
     router.push('/');
     return;
   }
 
-  // Fetch all product listings from backend API
+  // Fetch all product listings from backend API using listing service
   const response = await listingService.getAllListings();
 
   if (response.success) {
-    // Store listings in component state for display
+    // Store listings in component state for display in template
     listings.value = response.data;
   } else {
-    // Log error and show empty listings
+    // Log error message and set listings to empty array
     console.error('Failed to fetch listings:', response.message);
     listings.value = [];
   }
 
-  // Stop loading animation once data is fetched
+  // Stop loading animation once data is fetched and ready for display
   loading.value = false;
 });
 </script>
