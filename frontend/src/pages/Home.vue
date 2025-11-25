@@ -316,8 +316,7 @@ const handleMenuClick = (action) => {
 
     case 'messages':
       // Route to messages page where user can view all conversations
-      // Reserved for later implementation
-      console.log('Navigating to My Messages');
+      router.push('/messages');
       break;
 
     case 'orders':

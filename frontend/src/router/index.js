@@ -5,6 +5,7 @@ import ForgotPassword from '../components/auth/ForgotPassword.vue';
 import ResetPassword from '../components/auth/ResetPassword.vue';
 import LoginForm from '../components/auth/LoginForm.vue';
 import Home from '../pages/Home.vue';
+import Messages from '../pages/Messages.vue';
 
 // ENHANCED COMPONENT IMPORTS (new for product detail page)
 // This component displays complete product information with media gallery
@@ -127,6 +128,20 @@ const router = createRouter({
     {
       path: '/:pathMatch(.*)*',
       redirect: '/login'
+    },
+    {
+      path: '/messages',
+      name: 'Messages',
+      component: Messages,
+      // Optional: Add route guard to ensure user is logged in
+      beforeEnter: (to, from, next) => {
+        const user = localStorage.getItem('user');
+        if (user) {
+          next();
+        } else {
+          next('/');
+        }
+      }
     }
   ]
 });

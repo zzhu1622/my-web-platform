@@ -98,46 +98,39 @@
               <!-- Message bubble -->
               <div
                 :class="[
-                  'max-w-[75%] rounded-lg px-3 py-2 break-words',
+                  'max-w-xs px-4 py-2 rounded-lg',
                   message.sender_uid === currentUserId
                     ? 'bg-blue-600 text-white'
                     : 'bg-white text-gray-900 border border-gray-200'
                 ]"
               >
                 <!-- Message text -->
-                <p class="text-sm whitespace-pre-wrap">{{ message.message_text }}</p>
+                <p class="text-sm whitespace-pre-wrap break-words">{{ message.message_text }}</p>
 
-                <!-- Message media (images/videos) -->
+                <!-- Media attachments -->
                 <div v-if="message.media && message.media.length > 0" class="mt-2 space-y-2">
                   <div v-for="media in message.media" :key="media.MediaID">
-                    <!-- Image display -->
+                    <!-- Image -->
                     <img
                       v-if="media.media_type === 'image'"
                       :src="getMediaUrl(media.url)"
-                      :alt="media.alt_text || 'Message image'"
-                      class="rounded max-w-full cursor-pointer"
-                      @click="openMediaPreview(media)"
+                      :alt="media.alt_text || 'Image'"
+                      class="rounded-lg max-w-full h-auto cursor-pointer"
+                      @click="openMediaFullscreen(getMediaUrl(media.url))"
                     />
 
-                    <!-- Video display -->
+                    <!-- Video -->
                     <video
                       v-else-if="media.media_type === 'video'"
+                      :src="getMediaUrl(media.url)"
                       controls
-                      class="rounded max-w-full"
-                    >
-                      <source :src="getMediaUrl(media.url)" type="video/mp4" />
-                      Your browser does not support the video tag.
-                    </video>
+                      class="rounded-lg max-w-full h-auto"
+                    ></video>
                   </div>
                 </div>
 
-                <!-- Message timestamp -->
-                <p
-                  :class="[
-                    'text-xs mt-1',
-                    message.sender_uid === currentUserId ? 'text-blue-200' : 'text-gray-500'
-                  ]"
-                >
+                <!-- Timestamp -->
+                <p class="text-xs mt-1 opacity-75">
                   {{ formatMessageTime(message.created_at) }}
                 </p>
               </div>
@@ -145,40 +138,47 @@
           </div>
         </div>
 
-        <!-- Message Input Area: Text input and action buttons -->
-        <div class="bg-white border-t border-gray-200 p-3">
-          <!-- Media preview (when user selects image/video) -->
-          <div v-if="selectedMedia" class="mb-2 relative">
-            <div class="inline-block relative">
-              <!-- Image preview -->
-              <img
-                v-if="selectedMediaType === 'image'"
-                :src="selectedMediaPreview"
-                alt="Preview"
-                class="max-h-20 rounded border border-gray-300"
-              />
-              <!-- Video preview -->
-              <video
-                v-else-if="selectedMediaType === 'video'"
-                class="max-h-20 rounded border border-gray-300"
-              >
-                <source :src="selectedMediaPreview" type="video/mp4" />
-              </video>
+        <!-- Media Preview Area: Shows selected image/video before sending -->
+        <div
+          v-if="selectedMediaPreview"
+          class="px-4 py-2 bg-gray-100 border-t border-gray-200 flex items-center gap-3"
+        >
+          <div class="relative">
+            <!-- Image preview -->
+            <img
+              v-if="selectedMediaType === 'image'"
+              :src="selectedMediaPreview"
+              alt="Preview"
+              class="w-16 h-16 object-cover rounded"
+            />
+            <!-- Video preview -->
+            <video
+              v-else-if="selectedMediaType === 'video'"
+              :src="selectedMediaPreview"
+              class="w-16 h-16 object-cover rounded"
+            ></video>
 
-              <!-- Remove media button -->
-              <button
-                @click="removeSelectedMedia"
-                class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition duration-200"
-              >
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+            <!-- Remove media button -->
+            <button
+              @click="clearMedia"
+              class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600"
+            >
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
 
-          <!-- Input row: Text input and buttons -->
-          <div class="flex items-end gap-2">
+          <div class="flex-1 min-w-0">
+            <p class="text-sm text-gray-700 truncate">
+              {{ selectedMediaType === 'image' ? 'Image ready to send' : 'Video ready to send' }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Message Input Area: Text input with send button and media attachment options -->
+        <div class="px-4 py-3 bg-white border-t border-gray-300">
+          <div class="flex items-center gap-2">
             <!-- Attach image button -->
             <button
               @click="triggerImageUpload"
@@ -225,18 +225,19 @@
             <!-- Send button -->
             <button
               @click="sendMessage"
-              :disabled="!canSendMessage"
+              :disabled="!canSendMessage || sending"
               :class="[
                 'p-2 rounded-lg transition duration-200 flex-shrink-0',
-                canSendMessage
+                canSendMessage && !sending
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               ]"
               title="Send message"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-if="!sending" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
+              <div v-else class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
             </button>
           </div>
 
@@ -305,6 +306,7 @@ const emit = defineEmits(['close', 'product-view']);
 const messages = ref([]);
 const newMessage = ref('');
 const loading = ref(false);
+const sending = ref(false);  // FIXED: Added missing sending state
 const conversationId = ref(null);
 const isSellerOnline = ref(false);
 
@@ -342,31 +344,48 @@ watch(() => props.isOpen, async (isOpen) => {
   }
 });
 
+// FIXED: Corrected initializeConversation function
 // Function: Initialize conversation when dialog opens
 // Creates new conversation or loads existing one
 const initializeConversation = async () => {
-  loading.value = true;
+  // FIXED: Check for correct props instead of non-existent props.listing
+  if (!props.sellerUid || !props.currentUserId) {
+    console.error('Missing required UIDs', {
+      sellerUid: props.sellerUid,
+      currentUserId: props.currentUserId
+    });
+    return;
+  }
 
   try {
-    // Get or create conversation between current user and seller
-    const convResult = await messageService.getOrCreateConversation(
-      props.currentUserId,
-      props.sellerUid,
-      props.productInfo?.item_id || null
+    const buyer_uid = props.currentUserId;
+    const seller_uid = props.sellerUid;
+    const item_id = props.productInfo?.item_id || null;
+
+    // Log for debugging
+    console.log('Creating conversation:', { buyer_uid, seller_uid, item_id });
+
+    // Validate UIDs
+    if (!buyer_uid || !seller_uid) {
+      console.error('Failed to initialize conversation: Buyer UID and Seller UID are required');
+      return;
+    }
+
+    // Create or get conversation
+    const response = await messageService.getOrCreateConversation(
+      buyer_uid,
+      seller_uid,
+      item_id
     );
 
-    if (convResult.success) {
-      conversationId.value = convResult.conversation_id;
-
-      // Load message history
+    if (response.success) {
+      conversationId.value = response.conversation_id;
       await loadMessages();
     } else {
-      console.error('Failed to initialize conversation:', convResult.message);
+      console.error('Failed to initialize conversation:', response.message);
     }
   } catch (error) {
     console.error('Error initializing conversation:', error);
-  } finally {
-    loading.value = false;
   }
 };
 
@@ -374,6 +393,7 @@ const initializeConversation = async () => {
 const loadMessages = async () => {
   if (!conversationId.value) return;
 
+  loading.value = true;
   try {
     const result = await messageService.getConversationMessages(
       conversationId.value,
@@ -381,7 +401,7 @@ const loadMessages = async () => {
     );
 
     if (result.success) {
-      messages.value = result.messages;
+      messages.value = result.messages || [];
 
       // Scroll to bottom after messages load
       await nextTick();
@@ -389,50 +409,54 @@ const loadMessages = async () => {
     }
   } catch (error) {
     console.error('Error loading messages:', error);
+  } finally {
+    loading.value = false;
   }
 };
 
 // Function: Send text message
 const sendMessage = async () => {
-  // Validate message content
-  if (!canSendMessage.value) return;
+  if (!newMessage.value.trim() && !selectedMedia.value) return;
+  if (sending.value) return;
 
-  const messageText = newMessage.value.trim();
-  const mediaFile = selectedMedia.value;
-  const mediaType = selectedMediaType.value;
-
-  // Clear input immediately for better UX
-  newMessage.value = '';
-  const tempMedia = mediaFile;
-  const tempMediaType = mediaType;
-  removeSelectedMedia();
+  sending.value = true;
 
   try {
-    // Send message with optional media
-    const result = await messageService.sendMessageWithMedia(
-      conversationId.value,
-      props.currentUserId,
-      messageText,
-      tempMedia,
-      tempMediaType
-    );
+    // Step 1: Send text message
+    const messageData = {
+      conversation_id: conversationId.value,
+      sender_uid: props.currentUserId,
+      message_text: newMessage.value.trim() || ' '
+    };
 
-    if (result.success) {
-      // Add new message to list
-      messages.value.push(result.message);
+    const response = await messageService.sendMessage(messageData);
 
-      // Scroll to bottom to show new message
-      await nextTick();
-      scrollToBottom();
+    if (response.success) {
+      // Step 2: Upload media if selected
+      if (selectedMedia.value) {
+        const formData = new FormData();
+        formData.append('file', selectedMedia.value);
+        formData.append('message_id', response.message_id);
+        formData.append('media_type', selectedMediaType.value);
+
+        await messageService.uploadMessageMedia(formData);
+      }
+
+      // Clear input
+      newMessage.value = '';
+      clearMedia();
+
+      // Reload messages
+      await loadMessages();
     } else {
-      console.error('Failed to send message:', result.message);
-      // Restore message text on failure
-      newMessage.value = messageText;
+      console.error('Failed to send message:', response.message);
+      alert('Failed to send message. Please try again.');
     }
   } catch (error) {
     console.error('Error sending message:', error);
-    // Restore message text on error
-    newMessage.value = messageText;
+    alert('Error sending message. Please try again.');
+  } finally {
+    sending.value = false;
   }
 };
 
@@ -450,70 +474,113 @@ const shareProductLink = async () => {
 
 // Function: Trigger image upload dialog
 const triggerImageUpload = () => {
-  imageInput.value?.click();
+  if (imageInput.value) {
+    imageInput.value.click();
+  }
 };
 
 // Function: Trigger video upload dialog
 const triggerVideoUpload = () => {
-  videoInput.value?.click();
+  if (videoInput.value) {
+    videoInput.value.click();
+  }
 };
 
-// Function: Handle file selection for upload
-const handleFileSelect = (event, type) => {
-  const file = event.target.files?.[0];
+// Function: Handle file selection from file input
+const handleFileSelect = (event, mediaType) => {
+  const file = event.target.files[0];
   if (!file) return;
 
-  // Validate file size (10MB for images, 50MB for videos)
-  const maxSize = type === 'image' ? 10 * 1024 * 1024 : 50 * 1024 * 1024;
-  if (file.size > maxSize) {
-    alert(`File too large. Maximum size: ${type === 'image' ? '10MB' : '50MB'}`);
+  // Validate file type
+  const isImage = file.type.startsWith('image/');
+  const isVideo = file.type.startsWith('video/');
+
+  if (mediaType === 'image' && !isImage) {
+    alert('Please select an image file');
     return;
   }
 
-  // Store selected file
+  if (mediaType === 'video' && !isVideo) {
+    alert('Please select a video file');
+    return;
+  }
+
+  // Validate file size (10MB for images, 50MB for videos)
+  const maxSize = isImage ? 10 * 1024 * 1024 : 50 * 1024 * 1024;
+  if (file.size > maxSize) {
+    alert(`File size exceeds ${isImage ? '10MB' : '50MB'} limit`);
+    return;
+  }
+
+  // Store selected media
   selectedMedia.value = file;
-  selectedMediaType.value = type;
+  selectedMediaType.value = mediaType;
 
   // Create preview URL
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    selectedMediaPreview.value = e.target.result;
-  };
-  reader.readAsDataURL(file);
+  selectedMediaPreview.value = URL.createObjectURL(file);
 
-  // Clear input for future selections
+  // Clear file input
   event.target.value = '';
 };
 
-// Function: Remove selected media before sending
-const removeSelectedMedia = () => {
+// Function: Clear selected media
+const clearMedia = () => {
+  if (selectedMediaPreview.value) {
+    URL.revokeObjectURL(selectedMediaPreview.value);
+  }
   selectedMedia.value = null;
   selectedMediaType.value = null;
   selectedMediaPreview.value = null;
 };
 
-// Function: Check seller's online status
-const checkSellerOnlineStatus = async () => {
-  try {
-    const result = await messageService.getOnlineStatus(props.sellerUid);
-    if (result.success) {
-      isSellerOnline.value = result.is_online;
-    }
-  } catch (error) {
-    console.error('Error checking online status:', error);
+// Function: Get full media URL
+const getMediaUrl = (relativePath) => {
+  if (!relativePath) return '';
+  if (relativePath.startsWith('http')) return relativePath;
+  return `http://localhost:3000${relativePath}`;
+};
+
+// Function: Open media in fullscreen (placeholder for future implementation)
+const openMediaFullscreen = (url) => {
+  window.open(url, '_blank');
+};
+
+// Function: Format message timestamp
+const formatMessageTime = (timestamp) => {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+};
+
+// Function: Scroll to bottom of message container
+const scrollToBottom = () => {
+  if (messagesContainer.value) {
+    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+  }
+};
+
+// Function: Close message dialog
+const closeDialog = () => {
+  emit('close');
+};
+
+// Function: View product details from dialog
+const viewProduct = () => {
+  if (props.productInfo && props.productInfo.listing_id) {
+    emit('product-view', props.productInfo.listing_id);
   }
 };
 
 // Function: Start polling for new messages
 const startMessagePolling = () => {
-  // Poll every 3 seconds for new messages
-  messagePollingInterval = setInterval(() => {
-    loadMessages();
+  // Poll every 3 seconds
+  messagePollingInterval = setInterval(async () => {
+    await loadMessages();
     checkSellerOnlineStatus();
   }, 3000);
 };
 
-// Function: Stop polling for messages
+// Function: Stop polling for new messages
 const stopMessagePolling = () => {
   if (messagePollingInterval) {
     clearInterval(messagePollingInterval);
@@ -521,80 +588,39 @@ const stopMessagePolling = () => {
   }
 };
 
-// Function: Scroll messages container to bottom
-const scrollToBottom = () => {
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
-  }
+// Function: Check seller online status
+// NOTE: getUserOnlineStatus API not implemented yet - temporarily disabled
+const checkSellerOnlineStatus = async () => {
+  // Online status feature not yet implemented
+  // Set to false for now
+  isSellerOnline.value = false;
 };
 
-// Function: Format message timestamp for display
-const formatMessageTime = (timestamp) => {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-
-  // Show relative time for recent messages
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-
-  // Show time for today's messages
-  if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  }
-
-  // Show date for older messages
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-};
-
-// Function: Get full media URL from relative path
-const getMediaUrl = (url) => {
-  if (!url) return '';
-  if (url.startsWith('http')) return url;
-  return `http://localhost:3000${url}`;
-};
-
-// Function: Open media preview in full screen
-const openMediaPreview = (media) => {
-  // Open media in new tab for full view
-  window.open(getMediaUrl(media.url), '_blank');
-};
-
-// Function: Close dialog
-const closeDialog = () => {
-  emit('close');
-};
-
-// Function: View product details
-const viewProduct = () => {
-  if (props.productInfo?.listing_id) {
-    emit('product-view', props.productInfo.listing_id);
-  }
-};
-
-// Lifecycle: Clean up polling on unmount
+// Component lifecycle: Cleanup on unmount
 onUnmounted(() => {
   stopMessagePolling();
+  clearMedia();
 });
 </script>
 
 <style scoped>
-/* Transition animations for dialog appearance */
-/* NO fade transition for backdrop since backdrop is removed */
-
+/* Slide-up transition for dialog appearance */
 .slide-up-enter-active,
 .slide-up-leave-active {
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
-.slide-up-enter-from,
+.slide-up-enter-from {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
 .slide-up-leave-to {
   transform: translateY(100%);
   opacity: 0;
 }
 
-/* Custom scrollbar styling for messages container */
+/* Custom scrollbar for messages container */
 .overflow-y-auto::-webkit-scrollbar {
   width: 6px;
 }
@@ -604,16 +630,11 @@ onUnmounted(() => {
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb {
-  background: #cbd5e0;
+  background: #888;
   border-radius: 3px;
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: #a0aec0;
-}
-
-/* Text area auto-resize */
-textarea {
-  max-height: 100px;
+  background: #555;
 }
 </style>

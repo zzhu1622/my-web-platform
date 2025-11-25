@@ -44,12 +44,12 @@ const messageController = {
                 // Check if conversation already exists between these two users
                 // Search in both directions (buyer-seller or seller-buyer)
                 const checkQuery = `
-                    SELECT ConversationID, buyer_uid, seller_uid 
-                    FROM Conversation 
-                    WHERE ((buyer_uid = ? AND seller_uid = ?) 
-                           OR (buyer_uid = ? AND seller_uid = ?))
-                    AND (ItemID = ? OR ItemID IS NULL)
-                    LIMIT 1
+                    SELECT ConversationID, buyer_uid, seller_uid
+                    FROM Conversation
+                    WHERE ((buyer_uid = ? AND seller_uid = ?)
+                        OR (buyer_uid = ? AND seller_uid = ?))
+                      AND (ItemID = ? OR ItemID IS NULL)
+                        LIMIT 1
                 `;
 
                 const [existingConversations] = await connection.query(checkQuery, [
@@ -70,8 +70,8 @@ const messageController = {
 
                 // Create new conversation if none exists
                 const insertQuery = `
-                    INSERT INTO Conversation (buyer_uid, seller_uid, ItemID, created_at, last_message_at)
-                    VALUES (?, ?, ?, NOW(), NOW())
+                    INSERT INTO Conversation (buyer_uid, seller_uid, ItemID, created_at, last_message_at, is_archived)
+                    VALUES (?, ?, ?, NOW(), NOW(), FALSE)
                 `;
 
                 const [insertResult] = await connection.query(insertQuery, [
@@ -110,7 +110,9 @@ const messageController = {
     // HTTP: GET /api/messages/conversation/:conversation_id
     // Purpose: Fetch all messages in a conversation with user and media details
     // URL Parameters: conversation_id - ID of the conversation
-    // Query Parameters: limit (optional) - number of messages to fetch (default 50)
+    // Query Parameters:
+    //   - current_user_id - ID of current user (for access control)
+    //   - limit (optional) - number of messages to fetch (default 50)
     // Response: { success: boolean, messages: array, conversation_info: object }
     // Process:
     //   1. Verify conversation exists and user is participant
@@ -120,8 +122,7 @@ const messageController = {
     getConversationMessages: async (req, res) => {
         try {
             const { conversation_id } = req.params;
-            const { limit = 50 } = req.query;
-            const current_user_id = req.body.current_user_id || req.query.current_user_id;
+            const { limit = 50, current_user_id } = req.query;
 
             // Validate conversation ID
             if (!conversation_id) {
@@ -136,18 +137,18 @@ const messageController = {
             try {
                 // Get conversation details and verify user is participant
                 const conversationQuery = `
-                    SELECT c.*, 
+                    SELECT c.*,
                            buyer.name as buyer_name, buyer.email as buyer_email,
                            seller.name as seller_name, seller.email as seller_email,
                            i.title as item_title, i.selling_price,
                            CASE WHEN buy_status.is_online = 1 THEN 'online' ELSE 'offline' END as buyer_status,
                            CASE WHEN sell_status.is_online = 1 THEN 'online' ELSE 'offline' END as seller_status
                     FROM Conversation c
-                    LEFT JOIN User buyer ON c.buyer_uid = buyer.UID
-                    LEFT JOIN User seller ON c.seller_uid = seller.UID
-                    LEFT JOIN Item i ON c.ItemID = i.ItemID
-                    LEFT JOIN user_online_status buy_status ON buyer.UID = buy_status.UID
-                    LEFT JOIN user_online_status sell_status ON seller.UID = sell_status.UID
+                             LEFT JOIN User buyer ON c.buyer_uid = buyer.UID
+                             LEFT JOIN User seller ON c.seller_uid = seller.UID
+                             LEFT JOIN Item i ON c.ItemID = i.ItemID
+                             LEFT JOIN user_online_status buy_status ON buyer.UID = buy_status.UID
+                             LEFT JOIN user_online_status sell_status ON seller.UID = sell_status.UID
                     WHERE c.ConversationID = ?
                 `;
 
@@ -163,9 +164,9 @@ const messageController = {
 
                 const conversation = conversations[0];
 
-                // Verify current user is participant in this conversation
-                if (current_user_id && 
-                    conversation.buyer_uid !== parseInt(current_user_id) && 
+                // Verify current user is participant in this conversation (if current_user_id provided)
+                if (current_user_id &&
+                    conversation.buyer_uid !== parseInt(current_user_id) &&
                     conversation.seller_uid !== parseInt(current_user_id)) {
                     connection.release();
                     return res.status(403).json({
@@ -176,14 +177,14 @@ const messageController = {
 
                 // Fetch all messages in conversation with sender information
                 const messagesQuery = `
-                    SELECT m.*, 
+                    SELECT m.*,
                            u.name as sender_name,
                            u.email as sender_email
                     FROM Message m
-                    LEFT JOIN User u ON m.sender_uid = u.UID
+                             LEFT JOIN User u ON m.sender_uid = u.UID
                     WHERE m.ConversationID = ?
                     ORDER BY m.created_at ASC
-                    LIMIT ?
+                        LIMIT ?
                 `;
 
                 const [messages] = await connection.query(messagesQuery, [
@@ -194,8 +195,8 @@ const messageController = {
                 // Fetch media for all messages in this conversation
                 const messagesWithMedia = await Promise.all(messages.map(async (message) => {
                     const mediaQuery = `
-                        SELECT * FROM MessageMedia 
-                        WHERE MessageID = ? 
+                        SELECT * FROM MessageMedia
+                        WHERE MessageID = ?
                         ORDER BY created_at ASC
                     `;
 
@@ -207,17 +208,20 @@ const messageController = {
                     };
                 }));
 
-                // Mark unread messages as read for current user
+                // Mark messages as read for current user (if current_user_id provided)
                 if (current_user_id) {
                     const markReadQuery = `
-                        UPDATE Message 
-                        SET is_read = TRUE, read_at = NOW() 
-                        WHERE ConversationID = ? 
-                        AND sender_uid != ? 
+                        UPDATE Message
+                        SET is_read = TRUE, read_at = NOW()
+                        WHERE ConversationID = ?
+                          AND sender_uid != ? 
                         AND is_read = FALSE
                     `;
 
-                    await connection.query(markReadQuery, [conversation_id, current_user_id]);
+                    await connection.query(markReadQuery, [
+                        conversation_id,
+                        parseInt(current_user_id)
+                    ]);
                 }
 
                 connection.release();
@@ -302,9 +306,9 @@ const messageController = {
             try {
                 // Verify conversation exists and user is participant
                 const verifyQuery = `
-                    SELECT * FROM Conversation 
-                    WHERE ConversationID = ? 
-                    AND (buyer_uid = ? OR seller_uid = ?)
+                    SELECT * FROM Conversation
+                    WHERE ConversationID = ?
+                      AND (buyer_uid = ? OR seller_uid = ?)
                 `;
 
                 const [conversations] = await connection.query(verifyQuery, [
@@ -323,8 +327,8 @@ const messageController = {
 
                 // Insert message into Message table
                 const insertQuery = `
-                    INSERT INTO Message (ConversationID, sender_uid, message_text, created_at, is_read)
-                    VALUES (?, ?, ?, NOW(), FALSE)
+                    INSERT INTO Message (ConversationID, sender_uid, message_text, created_at, is_read, read_at)
+                    VALUES (?, ?, ?, NOW(), FALSE, NULL)
                 `;
 
                 const [insertResult] = await connection.query(insertQuery, [
@@ -333,36 +337,33 @@ const messageController = {
                     message_text
                 ]);
 
-                const messageId = insertResult.insertId;
+                const newMessageId = insertResult.insertId;
 
                 // Update conversation's last_message_at timestamp
-                const updateConversationQuery = `
-                    UPDATE Conversation 
-                    SET last_message_at = NOW() 
+                const updateConvQuery = `
+                    UPDATE Conversation
+                    SET last_message_at = NOW()
                     WHERE ConversationID = ?
                 `;
 
-                await connection.query(updateConversationQuery, [conversation_id]);
+                await connection.query(updateConvQuery, [conversation_id]);
 
-                // Fetch the newly created message with sender information
+                // Fetch the newly created message with sender info
                 const fetchMessageQuery = `
                     SELECT m.*, u.name as sender_name, u.email as sender_email
                     FROM Message m
-                    LEFT JOIN User u ON m.sender_uid = u.UID
+                             LEFT JOIN User u ON m.sender_uid = u.UID
                     WHERE m.MessageID = ?
                 `;
 
-                const [newMessage] = await connection.query(fetchMessageQuery, [messageId]);
+                const [messages] = await connection.query(fetchMessageQuery, [newMessageId]);
 
                 connection.release();
 
                 return res.status(201).json({
                     success: true,
-                    message_id: messageId,
-                    message: {
-                        ...newMessage[0],
-                        media: []
-                    }
+                    message_id: newMessageId,
+                    message: messages[0]
                 });
 
             } catch (error) {
@@ -383,41 +384,41 @@ const messageController = {
     // =====================================================
     // UPLOAD MESSAGE MEDIA
     // =====================================================
-    // HTTP: POST /api/messages/upload-media
-    // Purpose: Upload image or video attachment to a message
-    // Request Body (multipart/form-data): 
-    //   - message_id: number
+    // HTTP: POST /api/messages/upload
+    // Purpose: Upload an image or video attachment for a message
+    // Request: multipart/form-data with fields:
+    //   - file: the image/video file
+    //   - message_id: ID of the message to attach media to
     //   - media_type: 'image' or 'video'
-    //   - file: uploaded file
     // Response: { success: boolean, media_id: number, media_url: string }
     // Process:
-    //   1. Validate file type and size
-    //   2. Save file to disk in appropriate directory
+    //   1. Validate file upload and message exists
+    //   2. Store file in Database/message-media directory
     //   3. Insert media record into MessageMedia table
-    //   4. Return media URL for immediate display
+    //   4. Return media URL for frontend display
     uploadMessageMedia: async (req, res) => {
         try {
-            // Check if file was uploaded
-            if (!req.file) {
+            const { message_id, media_type } = req.body;
+            const file = req.file;
+
+            // Validate file upload
+            if (!file) {
                 return res.status(400).json({
                     success: false,
                     message: 'No file uploaded'
                 });
             }
 
-            const { message_id, media_type } = req.body;
-            const file = req.file;
-
-            // Validate required fields
-            if (!message_id || !media_type) {
+            // Validate message_id
+            if (!message_id) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Message ID and media type are required'
+                    message: 'Message ID is required'
                 });
             }
 
-            // Validate media type
-            if (!['image', 'video'].includes(media_type)) {
+            // Validate media_type
+            if (!media_type || !['image', 'video'].includes(media_type)) {
                 return res.status(400).json({
                     success: false,
                     message: 'Media type must be either "image" or "video"'
@@ -448,9 +449,9 @@ const messageController = {
 
                 // Insert media record into MessageMedia table
                 const insertQuery = `
-                    INSERT INTO MessageMedia 
-                    (MessageID, media_type, url, thumbnail_url, file_size_kb, created_at)
-                    VALUES (?, ?, ?, ?, ?, NOW())
+                    INSERT INTO MessageMedia
+                    (MessageID, media_type, url, thumbnail_url, alt_text, file_size_kb, video_duration_sec, created_at)
+                    VALUES (?, ?, ?, ?, NULL, ?, NULL, NOW())
                 `;
 
                 const [insertResult] = await connection.query(insertQuery, [
@@ -514,20 +515,20 @@ const messageController = {
             try {
                 // Fetch all conversations for this user using the database view
                 const query = `
-                    SELECT 
+                    SELECT
                         cd.*,
-                        CASE 
+                        CASE
                             WHEN cd.buyer_uid = ? THEN cd.seller_uid
                             ELSE cd.buyer_uid
-                        END as other_user_id,
-                        CASE 
+                            END as other_user_id,
+                        CASE
                             WHEN cd.buyer_uid = ? THEN cd.seller_name
                             ELSE cd.buyer_name
-                        END as other_user_name,
-                        CASE 
+                            END as other_user_name,
+                        CASE
                             WHEN cd.buyer_uid = ? THEN cd.seller_status
                             ELSE cd.buyer_status
-                        END as other_user_status
+                            END as other_user_status
                     FROM conversation_details cd
                     WHERE cd.buyer_uid = ? OR cd.seller_uid = ?
                     ORDER BY cd.last_message_at DESC
@@ -585,8 +586,8 @@ const messageController = {
             try {
                 // Check user's online status from view
                 const query = `
-                    SELECT is_online, last_seen 
-                    FROM user_online_status 
+                    SELECT is_online, last_seen
+                    FROM user_online_status
                     WHERE UID = ?
                 `;
 
