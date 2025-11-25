@@ -178,9 +178,9 @@
 
             <!-- Action Buttons: Message and Details -->
             <div class="flex gap-2">
-              <!-- Message Seller Button: Opens messaging interface -->
+              <!-- Message Seller Button: Opens messaging dialog -->
               <button
-                @click="messageSeller(listing.seller_name, listing.ListID)"
+                @click="openMessageDialog(listing)"
                 class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg flex items-center justify-center gap-2 transition duration-200 font-medium text-sm"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -189,29 +189,28 @@
                 Message
               </button>
 
-              <!-- View Details Button: Navigates to detailed product page -->
+              <!-- View Details Button: Navigate to product detail page -->
               <button
                 @click="viewListing(listing.ListID)"
-                class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900 py-2 rounded-lg flex items-center justify-center gap-2 transition duration-200 font-medium text-sm"
+                class="flex-1 bg-white border-2 border-blue-500 text-blue-600 hover:bg-blue-50 py-2 rounded-lg flex items-center justify-center gap-2 transition duration-200 font-medium text-sm"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
-                Detail
+                Details
               </button>
             </div>
           </div>
-
         </div>
       </div>
     </main>
 
-    <!-- Footer Section -->
-    <footer class="bg-gray-900 text-gray-300 mt-20">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-
-        <!-- Footer content grid with 4 columns -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+    <!-- Footer Section: Contains company information and links -->
+    <footer class="bg-gray-800 text-gray-300 py-12 mt-16">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Footer Grid: 4 columns for different sections -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
 
           <!-- Footer Column 1: About -->
           <div>
@@ -256,6 +255,17 @@
         </div>
       </div>
     </footer>
+
+    <!-- Message Dialog Component: Floating chat window -->
+    <MessageDialog
+      :is-open="messageDialogOpen"
+      :seller-uid="selectedSeller.uid"
+      :seller-name="selectedSeller.name"
+      :current-user-id="user?.UID || 0"
+      :product-info="selectedProduct"
+      @close="closeMessageDialog"
+      @product-view="viewListingFromDialog"
+    />
   </div>
 </template>
 
@@ -264,6 +274,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import authService from '../services/authService';
 import listingService from '../services/listingService';
+import MessageDialog from '../components/MessageDialog.vue';
 
 // Vue Router instance for navigation
 const router = useRouter();
@@ -273,6 +284,11 @@ const user = ref(null);
 const showUserMenu = ref(false);
 const listings = ref([]);
 const loading = ref(true);
+
+// Message dialog state
+const messageDialogOpen = ref(false);
+const selectedSeller = ref({ uid: 0, name: '' });
+const selectedProduct = ref(null);
 
 // Function: Calculate remaining days until listing expires
 // Used to show urgency badges on product cards
@@ -342,13 +358,54 @@ const viewListing = (listingId) => {
   router.push(`/listing/${listingId}`);
 };
 
-// Function: Navigate to messaging page for seller contact
-// Reserved for later implementation when messaging system is ready
-const messageSeller = (sellerName, listingId) => {
-  // This functionality is reserved for later implementation
-  // Currently logs seller information and listing ID for debugging and development
-  console.log('Message seller:', sellerName, 'for listing:', listingId);
-  // router.push(`/message/${listingId}`);
+// Function: Open message dialog for seller contact
+// Opens floating chat window with seller information and product context
+const openMessageDialog = (listing) => {
+  // Prevent user from messaging themselves
+  if (listing.seller_uid === user.value?.UID) {
+    alert('You cannot message yourself!');
+    return;
+  }
+
+  // Set seller information for message dialog
+  selectedSeller.value = {
+    uid: listing.seller_uid,
+    name: listing.seller_name
+  };
+
+  // Set product information for context in chat
+  selectedProduct.value = {
+    listing_id: listing.ListID,
+    item_id: listing.ItemID,
+    title: listing.title,
+    price: listing.selling_price,
+    image: listing.images?.[0] || null
+  };
+
+  // Open message dialog
+  messageDialogOpen.value = true;
+};
+
+// Function: Close message dialog
+const closeMessageDialog = () => {
+  messageDialogOpen.value = false;
+
+  // Clear selected seller and product after delay to allow animation
+  setTimeout(() => {
+    selectedSeller.value = { uid: 0, name: '' };
+    selectedProduct.value = null;
+  }, 300);
+};
+
+// Function: View listing from message dialog product link
+const viewListingFromDialog = (listingId) => {
+  // Close dialog first
+  closeMessageDialog();
+
+  // Navigate to listing details after brief delay
+  setTimeout(() => {
+    viewListing(listingId);
+  }, 300);
 };
 
 // Lifecycle Hook: Runs when component is mounted to DOM

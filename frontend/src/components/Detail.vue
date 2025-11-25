@@ -423,6 +423,17 @@
         </div>
       </div>
     </footer>
+
+    <!-- Message Dialog Component: Floating chat window (ADDED) -->
+    <MessageDialog
+      :is-open="messageDialogOpen"
+      :seller-uid="listing?.seller?.uid || 0"
+      :seller-name="listing?.seller?.name || ''"
+      :current-user-id="user?.UID || 0"
+      :product-info="productInfoForDialog"
+      @close="closeMessageDialog"
+      @product-view="viewListingFromDialog"
+    />
   </div>
 </template>
 
@@ -431,6 +442,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import authService from '../services/authService';
 import listingService from '../services/listingService';
+import MessageDialog from '../components/MessageDialog.vue';
 
 // Router and route instances for navigation
 const router = useRouter();
@@ -446,6 +458,9 @@ const error = ref(null);
 // Media gallery state variables
 const currentMediaIndex = ref(0);
 const allMediaItems = ref([]);
+
+// Message dialog state (ADDED)
+const messageDialogOpen = ref(false);
 
 // Lifecycle hook: runs when component is mounted to DOM
 // Initializes component by loading user data and fetching listing details
@@ -523,6 +538,19 @@ const calculateSavingsPercentage = computed(() => {
   return Math.round(percentage);
 });
 
+// Computed property: prepare product info for message dialog (ADDED)
+const productInfoForDialog = computed(() => {
+  if (!listing.value) return null;
+
+  return {
+    listing_id: listing.value.ListID,
+    item_id: listing.value.ItemID,
+    title: listing.value.title,
+    price: listing.value.selling_price,
+    image: allMediaItems.value[0]?.url || null
+  };
+});
+
 // Function: navigate to previous media item in gallery
 const previousMedia = () => {
   currentMediaIndex.value = (currentMediaIndex.value - 1 + allMediaItems.value.length) % allMediaItems.value.length;
@@ -575,11 +603,33 @@ const handleLogout = () => {
   router.push('/');
 };
 
-// Function: navigate to messaging page with seller
+// Function: open message dialog with seller (MODIFIED)
 const messageSeller = () => {
-  console.log('Opening message with seller:', listing.value.seller.name);
-  // Reserved for later implementation when messaging system is ready
-  // router.push(`/message/${listing.value.ListID}`);
+  // Prevent user from messaging themselves
+  if (listing.value.seller.uid === user.value?.UID) {
+    alert('You cannot message yourself!');
+    return;
+  }
+
+  // Open message dialog
+  messageDialogOpen.value = true;
+};
+
+// Function: close message dialog (ADDED)
+const closeMessageDialog = () => {
+  messageDialogOpen.value = false;
+};
+
+// Function: view listing from message dialog product link (ADDED)
+const viewListingFromDialog = (listingId) => {
+  // If same listing, just close dialog
+  if (listingId === listing.value?.ListID) {
+    closeMessageDialog();
+    return;
+  }
+
+  // Navigate to different listing
+  router.push(`/listing/${listingId}`);
 };
 
 // Function: initiate purchase process
