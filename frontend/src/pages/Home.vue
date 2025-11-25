@@ -130,7 +130,7 @@
 
           <!-- Product Image Container -->
           <div class="group relative overflow-hidden bg-gray-200 h-64">
-            <!-- Product Image -->
+            <!-- Product Image: Clickable to view details -->
             <img
               :src="listing.images?.[0] || '/placeholder.png'"
               :alt="listing.title || 'Product image'"
@@ -138,14 +138,14 @@
               @click="viewListing(listing.ListID)"
             />
 
-            <!-- Days Remaining Badge -->
+            <!-- Days Remaining Badge: Shows urgency for time-limited listings -->
             <div
               class="absolute z-20 top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold"
             >
               Only {{ daysRemaining(listing.expire_date) }} days left
             </div>
 
-            <!-- Hover Overlay (behind the image, non-interactive) -->
+            <!-- Hover Overlay: Creates dimming effect behind image on hover -->
             <div
               class="absolute z-0 inset-0 pointer-events-none bg-black/0 group-hover:bg-black/20 transition duration-200"
             ></div>
@@ -155,7 +155,7 @@
           <!-- Product Information Section -->
           <div class="p-4">
 
-            <!-- Product Title: Clickable to view details (reserved for later) -->
+            <!-- Product Title: Clickable to view details -->
             <h3
               class="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 hover:text-blue-600 transition duration-200 cursor-pointer"
               @click="viewListing(listing.ListID)"
@@ -163,7 +163,7 @@
               {{ listing.title }}
             </h3>
 
-            <!-- Product Price: Clickable to view details (reserved for later) -->
+            <!-- Product Price: Highlighted in blue, clickable to view details -->
             <div
               class="text-2xl font-bold text-blue-600 mb-3 hover:text-blue-700 transition duration-200 cursor-pointer"
               @click="viewListing(listing.ListID)"
@@ -171,14 +171,14 @@
               ${{ listing.selling_price.toFixed(2) }}
             </div>
 
-            <!-- Seller Information -->
+            <!-- Seller Information: Shows who is selling the item -->
             <div class="text-sm text-gray-600 mb-4">
               <p>Seller: <span class="font-medium text-gray-900">{{ listing.seller_name }}</span></p>
             </div>
 
-            <!-- Action Buttons -->
+            <!-- Action Buttons: Message and Details -->
             <div class="flex gap-2">
-              <!-- Message Seller Button -->
+              <!-- Message Seller Button: Opens messaging interface -->
               <button
                 @click="messageSeller(listing.seller_name, listing.ListID)"
                 class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg flex items-center justify-center gap-2 transition duration-200 font-medium text-sm"
@@ -189,27 +189,34 @@
                 Message
               </button>
 
-              <!-- View Details Button -->
+              <!-- View Details Button: Navigates to detailed product page -->
               <button
                 @click="viewListing(listing.ListID)"
-                class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900 py-2 rounded-lg transition duration-200 font-medium text-sm"
+                class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900 py-2 rounded-lg flex items-center justify-center gap-2 transition duration-200 font-medium text-sm"
               >
-                Details
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+                Detail
               </button>
             </div>
           </div>
+
         </div>
       </div>
     </main>
 
     <!-- Footer Section -->
-    <footer class="bg-gray-900 text-gray-300 mt-16">
+    <footer class="bg-gray-900 text-gray-300 mt-20">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+
+        <!-- Footer content grid with 4 columns -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+
           <!-- Footer Column 1: About -->
           <div>
-            <h3 class="text-white font-bold mb-4">AptExchange</h3>
-            <p class="text-sm">Marketplace for residents living. Buy and sell second-hand items in your apartment community.</p>
+            <h4 class="text-white font-bold mb-4">About AptExchange</h4>
+            <p class="text-sm leading-relaxed">A community marketplace for apartment residents to buy and sell second-hand items efficiently and safely.</p>
           </div>
 
           <!-- Footer Column 2: Quick Links -->
@@ -268,6 +275,7 @@ const listings = ref([]);
 const loading = ref(true);
 
 // Function: Calculate remaining days until listing expires
+// Used to show urgency badges on product cards
 const daysRemaining = (expireDate) => {
   const today = new Date();
   const expire = new Date(expireDate);
@@ -288,28 +296,24 @@ const handleMenuClick = (action) => {
       // Route to account dashboard where user can manage profile information
       // Reserved for later implementation
       console.log('Navigating to My Account');
-      // router.push('/account');
       break;
 
     case 'messages':
       // Route to messages page where user can view all conversations
       // Reserved for later implementation
       console.log('Navigating to My Messages');
-      // router.push('/messages');
       break;
 
     case 'orders':
       // Route to orders page where user can view purchase history
       // Reserved for later implementation
       console.log('Navigating to My Orders');
-      // router.push('/orders');
       break;
 
     case 'postlisting':
       // Route to post listing form where user can create new marketplace listing
       // Reserved for later implementation
       console.log('Navigating to Post Listing');
-      // router.push('/post-listing');
       break;
 
     case 'logout':
@@ -333,12 +337,9 @@ const handleLogout = () => {
 };
 
 // Function: Navigate to product details page
-// Reserved for later implementation when product detail page is ready
+// Takes listing ID and routes to detail view where all product information is displayed
 const viewListing = (listingId) => {
-  // This functionality is reserved for later implementation
-  // Currently logs listing ID for debugging and development purposes
-  console.log('View listing details for ListID:', listingId);
-  // router.push(`/listing/${listingId}`);
+  router.push(`/listing/${listingId}`);
 };
 
 // Function: Navigate to messaging page for seller contact

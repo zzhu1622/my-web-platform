@@ -1,11 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
+// ORIGINAL COMPONENT IMPORTS (maintained)
 import ForgotPassword from '../components/auth/ForgotPassword.vue';
 import ResetPassword from '../components/auth/ResetPassword.vue';
-
 import LoginForm from '../components/auth/LoginForm.vue';
-
 import Home from '../pages/Home.vue';
+
+// ENHANCED COMPONENT IMPORTS (new for product detail page)
+// This component displays complete product information with media gallery
+import Detail from '../components/Detail.vue';
 
 // Create router instance with history mode
 // createWebHistory uses regular URL history (no hash #)
@@ -15,6 +18,8 @@ const router = createRouter({
 
   // Define all application routes
   routes: [
+    // ORIGINAL ROUTES (maintained - no changes)
+
     // Login Page Route
     // Existing login form component
     {
@@ -33,6 +38,8 @@ const router = createRouter({
       }
     },
 
+    // Forgot Password Route
+    // Allows users to reset forgotten passwords
     {
       path: '/forgot-password',
 
@@ -48,6 +55,8 @@ const router = createRouter({
       }
     },
 
+    // Reset Password Route
+    // Handles password reset with email verification
     {
       path: '/reset-password/:email',
 
@@ -67,6 +76,8 @@ const router = createRouter({
       }
     },
 
+    // Home Page Route
+    // Displays all product listings
     {
       path: '/home',
       name: 'Home',
@@ -78,11 +89,41 @@ const router = createRouter({
       }
     },
 
+    // ENHANCED ROUTE (new for product detail page)
+    // Displays detailed information about a specific product listing
+    // Includes images/videos, pricing, seller info, and descriptions
+    {
+      path: '/listing/:listingId',
+
+      // Component name for debugging and Vue DevTools
+      name: 'ProductDetail',
+
+      // Dynamic import for code splitting (loads only when needed)
+      // This improves initial page load performance
+      component: Detail,
+
+      meta: {
+        // This page requires user to be authenticated
+        // Prevents unauthenticated users from viewing product details
+        requiresAuth: true,
+
+        // Page title for browser tab
+        title: 'Product Details - AptExchange'
+      }
+    },
+
+    // ORIGINAL ROUTES (maintained - no changes)
+
+    // Root path redirect
+    // All unauthenticated users redirected to login
     {
       path: '/',
       redirect: '/login'
     },
 
+    // Wildcard route for undefined paths
+    // Catches any URL that doesn't match defined routes
+    // Redirects to login page
     {
       path: '/:pathMatch(.*)*',
       redirect: '/login'
@@ -91,31 +132,43 @@ const router = createRouter({
 });
 
 // Check authentication requirements and set page titles
+// ORIGINAL NAVIGATION GUARD (maintained with enhanced comments)
 router.beforeEach((to, from, next) => {
+  // Check if user is logged in by reading localStorage flag
+  // This flag is set during successful login and cleared on logout
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
 
   // Check if target route requires authentication
+  // Routes can specify requiresAuth in their meta property
   const requiresAuth = to.meta.requiresAuth;
 
   // Set page title from route meta
-  // Updates browser tab title
+  // Updates browser tab title to match current page
   if (to.meta.title) {
     document.title = to.meta.title;
   }
 
   // Authentication check logic
+  // ORIGINAL LOGIC (maintained)
   if (requiresAuth && !isLoggedIn) {
+    // User trying to access protected route without login
+    // Redirect to login page
     next('/login');
   } else if (!requiresAuth && isLoggedIn && (to.path === '/login' || to.path === '/forgot-password')) {
+    // Logged-in user trying to access public pages (login/forgot-password)
+    // Redirect to home page
     next('/home');
   } else {
+    // All other cases: allow navigation
     next();
   }
 });
 
+// ORIGINAL AFTER-NAVIGATION HOOK (maintained)
+// Scroll to top of page after navigation completes
+// This prevents user from being scrolled to middle of previous page
 router.afterEach((to, from) => {
   window.scrollTo(0, 0);
 });
-
 
 export default router;
