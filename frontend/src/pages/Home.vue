@@ -340,11 +340,12 @@
       </div>
     </main>
 
-    <!-- Footer Section: Contains company information and links -->
-    <footer class="bg-gray-800 text-gray-300 py-12 mt-16">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Footer Grid: 4 columns for different sections -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+    <!-- Footer Section -->
+    <footer class="bg-gray-900 text-gray-300 mt-20">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+        <!-- Footer content grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
 
           <!-- Footer Column 1: About -->
           <div>
@@ -356,7 +357,7 @@
           <div>
             <h4 class="text-white font-bold mb-4">Quick Links</h4>
             <ul class="text-sm space-y-2">
-              <li><a href="#" class="hover:text-white transition duration-200">Browse Listings</a></li>
+              <li><button @click="goBack" class="hover:text-white transition duration-200">Browse Listings</button></li>
               <li><a href="#" class="hover:text-white transition duration-200">My Account</a></li>
               <li><a href="#" class="hover:text-white transition duration-200">Messages</a></li>
             </ul>
@@ -383,7 +384,7 @@
           </div>
         </div>
 
-        <!-- Footer Bottom: Copyright -->
+        <!-- Footer bottom: Copyright -->
         <div class="border-t border-gray-700 pt-8 text-sm text-center">
           <p>&copy; 2025 AptExchange. All rights reserved. CSC 4710 Database Systems Project.</p>
         </div>
