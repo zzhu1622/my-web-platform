@@ -1,25 +1,36 @@
-const pool = require('../config/database');
+// Listing Controller Module
+// Handles all listing-related API endpoints including:
+// - Fetching all listings with search and filters
+// - Fetching listing details by ID
+// - Fetching user's own listings
+// - Creating new listings with media upload
+// - Fetching price reference data for similar sold items
 
-// FUNCTION 1: Get all active listings with search, filter, and sort capabilities
-// ENHANCEMENT: Added support for keyword search, category filter, and sorting options
+const pool = require('../config/database');
+const path = require('path');
+const fs = require('fs');
+
+// =====================================================
+// FUNCTION 1: Get all active listings with optional search and filters
+// =====================================================
+// Endpoint: GET /api/listings
+// Query Parameters:
+// - searchKeyword: string to search in item titles (partial match)
+// - category: filter by specific category
+// - sortBy: field to sort by (price or expire_date)
+// - sortOrder: sort direction (asc or desc)
 exports.getAllListings = async (req, res) => {
     try {
-        console.log('Fetching listings with filters from database');
-
         // Extract query parameters from request
-        // searchKeyword: keyword to search in item title (case-insensitive partial match)
-        // category: filter listings by specific item category
-        // sortBy: determines sorting field (price or expire_date)
-        // sortOrder: determines sort direction (asc for ascending, desc for descending)
         const { searchKeyword, category, sortBy, sortOrder } = req.query;
 
-        console.log('Applied filters:', { searchKeyword, category, sortBy, sortOrder });
+        console.log('Fetching listings with params:', { searchKeyword, category, sortBy, sortOrder });
 
-        // Attempt to get database connection
         let connection;
         try {
             connection = await pool.getConnection();
         } catch (dbError) {
+            console.error('Database connection failed:', dbError.message);
             return res.status(503).json({
                 success: false,
                 message: 'Unable to connect to the database'
@@ -27,131 +38,90 @@ exports.getAllListings = async (req, res) => {
         }
 
         try {
-            // Base SQL query to fetch listings with related information
-            // Joins Listing, Item, User, and ListingMedia tables
-            let query = `
-                SELECT
-                    l.ListID,
-                    l.ItemID,
-                    l.UID as seller_uid,
-                    i.title,
-                    i.category,
-                    i.selling_price,
-                    i.original_price,
-                    l.status,
-                    l.expire_date,
-                    u.name as seller_name,
-                    m.url as image_url
-                FROM Listing l
-                JOIN Item i ON l.ItemID = i.ItemID
-                JOIN User u ON l.UID = u.UID
-                LEFT JOIN ListingMedia m ON l.ListID = m.ListID AND m.media_type = 'image'
-                WHERE l.status = 'active'
-            `;
-
-            // Array to store query parameters for prepared statement
-            const queryParams = [];
+            // Build dynamic WHERE clause based on provided filters
+            let whereConditions = ['l.status = ?'];
+            let queryParams = ['active'];
 
             // Add search keyword filter if provided
-            // Uses LIKE operator with wildcards for partial matching
-            // Case-insensitive search on item title
+            // Searches in item title using LIKE with wildcards
             if (searchKeyword && searchKeyword.trim() !== '') {
-                query += ` AND i.title LIKE ?`;
+                whereConditions.push('i.title LIKE ?');
                 queryParams.push(`%${searchKeyword.trim()}%`);
             }
 
             // Add category filter if provided
-            // Exact match on category field
             if (category && category.trim() !== '') {
-                query += ` AND i.category = ?`;
+                whereConditions.push('i.category = ?');
                 queryParams.push(category.trim());
             }
 
-            // Determine sorting field and direction
-            // Default sort by created_at DESC if no sort parameters provided
-            let orderByClause = 'ORDER BY l.created_at DESC, m.created_at ASC';
-
-            if (sortBy && sortOrder) {
-                // Validate sortOrder to prevent SQL injection
-                const validSortOrder = sortOrder.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
-
-                // Apply sorting based on sortBy parameter
-                switch (sortBy) {
-                    case 'price':
-                        // Sort by selling price (low to high or high to low)
-                        orderByClause = `ORDER BY i.selling_price ${validSortOrder}, l.created_at DESC, m.created_at ASC`;
-                        break;
-
-                    case 'expire_date':
-                        // Sort by expiration date (near to far or far to near)
-                        orderByClause = `ORDER BY l.expire_date ${validSortOrder}, l.created_at DESC, m.created_at ASC`;
-                        break;
-
-                    default:
-                        // Keep default sorting if sortBy is invalid
-                        break;
+            // Build ORDER BY clause based on sortBy and sortOrder parameters
+            let orderByClause = 'ORDER BY l.created_at DESC';
+            if (sortBy) {
+                const validSortFields = {
+                    'price': 'i.selling_price',
+                    'expire_date': 'l.expire_date'
+                };
+                const sortField = validSortFields[sortBy];
+                if (sortField) {
+                    const direction = sortOrder === 'asc' ? 'ASC' : 'DESC';
+                    orderByClause = `ORDER BY ${sortField} ${direction}`;
                 }
             }
 
-            // Append ORDER BY clause and LIMIT to final query
-            query += ` ${orderByClause} LIMIT 50`;
+            // Construct the complete SQL query
+            const query = `
+                SELECT
+                    l.ListID,
+                    l.ItemID,
+                    l.UID as seller_uid,
+                    l.status,
+                    l.expire_date,
+                    i.title,
+                    i.category,
+                    i.condition,
+                    i.selling_price,
+                    i.original_price,
+                    u.name as seller_name,
+                    (
+                        SELECT m.url
+                        FROM ListingMedia m
+                        LEFT JOIN ListingMedia_Image mi ON m.MediaID = mi.MediaID
+                        WHERE m.ListID = l.ListID AND m.media_type = 'image'
+                        ORDER BY mi.slot ASC, m.created_at ASC
+                        LIMIT 1
+                    ) as cover_image
+                FROM Listing l
+                JOIN Item i ON l.ItemID = i.ItemID
+                JOIN User u ON l.UID = u.UID
+                WHERE ${whereConditions.join(' AND ')}
+                ${orderByClause}
+            `;
 
-            console.log('Executing query:', query);
-            console.log('Query parameters:', queryParams);
-
-            // Execute query with parameters
             const [rows] = await connection.execute(query, queryParams);
             connection.release();
 
-            console.log(`Retrieved ${rows.length} rows from database`);
-
-            // Group images by listing ID for proper formatting
-            // Each listing can have multiple images, but we need to return each listing once
-            const listingsMap = new Map();
-            rows.forEach(row => {
-                if (!listingsMap.has(row.ListID)) {
-                    listingsMap.set(row.ListID, {
-                        ListID: row.ListID,
-                        ItemID: row.ItemID,
-                        title: row.title,
-                        category: row.category,
-                        selling_price: parseFloat(row.selling_price),
-                        original_price: row.original_price ? parseFloat(row.original_price) : null,
-                        status: row.status,
-                        expire_date: row.expire_date,
-                        seller_uid: row.seller_uid,
-                        seller_name: row.seller_name,
-                        images: [],
-                        cover_image: null
-                    });
-                }
-                // Add image URL to listing's image array
-                if (row.image_url) {
-                    listingsMap.get(row.ListID).images.push(row.image_url);
-                }
-            });
-
-            // Set cover_image to first image in array for each listing
-            listingsMap.forEach(listing => {
-                if (listing.images.length > 0) {
-                    listing.cover_image = listing.images[0];
-                }
-            });
-
-            // Convert Map to Array for JSON response
-            const listings = Array.from(listingsMap.values());
+            // Format response data with images array structure
+            const listings = rows.map(row => ({
+                ListID: row.ListID,
+                ItemID: row.ItemID,
+                seller_uid: row.seller_uid,
+                title: row.title,
+                category: row.category,
+                condition: row.condition,
+                selling_price: parseFloat(row.selling_price),
+                original_price: row.original_price ? parseFloat(row.original_price) : null,
+                status: row.status,
+                expire_date: row.expire_date,
+                seller_name: row.seller_name,
+                images: row.cover_image ? [row.cover_image] : []
+            }));
 
             return res.status(200).json({
                 success: true,
                 message: 'Listings fetched successfully',
                 data: listings,
-                count: listings.length,
-                filters: {
-                    searchKeyword: searchKeyword || null,
-                    category: category || null,
-                    sortBy: sortBy || null,
-                    sortOrder: sortOrder || null
-                }
+                count: listings.length
             });
 
         } catch (queryError) {
@@ -159,7 +129,7 @@ exports.getAllListings = async (req, res) => {
             console.error('Query error:', queryError);
             return res.status(503).json({
                 success: false,
-                message: 'Unable to fetch listings from database'
+                message: 'Unable to fetch listings'
             });
         }
 
@@ -172,13 +142,12 @@ exports.getAllListings = async (req, res) => {
     }
 };
 
-// FUNCTION 2: Get all unique categories from items in database
-// Used to populate category filter dropdown with actual categories
+// =====================================================
+// FUNCTION 2: Get all unique categories from database
+// =====================================================
+// Endpoint: GET /api/listings/categories
 exports.getCategories = async (req, res) => {
     try {
-        console.log('Fetching all unique categories from database');
-
-        // Attempt to get database connection
         let connection;
         try {
             connection = await pool.getConnection();
@@ -190,27 +159,24 @@ exports.getCategories = async (req, res) => {
         }
 
         try {
-            // Query to get distinct categories from Item table
-            // Only includes categories from active listings
+            // Query distinct categories from Item table
             const query = `
-                SELECT DISTINCT i.category
-                FROM Item i
-                         JOIN Listing l ON i.ItemID = l.ItemID
-                WHERE l.status = 'active'
-                ORDER BY i.category ASC
+                SELECT DISTINCT category
+                FROM Item
+                WHERE category IS NOT NULL AND category != ''
+                ORDER BY category ASC
             `;
 
             const [rows] = await connection.execute(query);
             connection.release();
 
-            // Extract category values into simple array
+            // Extract category values from rows
             const categories = rows.map(row => row.category);
 
             return res.status(200).json({
                 success: true,
                 message: 'Categories fetched successfully',
-                data: categories,
-                count: categories.length
+                data: categories
             });
 
         } catch (queryError) {
@@ -218,7 +184,7 @@ exports.getCategories = async (req, res) => {
             console.error('Query error:', queryError);
             return res.status(503).json({
                 success: false,
-                message: 'Unable to fetch categories from database'
+                message: 'Unable to fetch categories'
             });
         }
 
@@ -231,12 +197,14 @@ exports.getCategories = async (req, res) => {
     }
 };
 
-// FUNCTION 3: Get specific listing details by listing ID
-// No changes from original implementation
+// =====================================================
+// FUNCTION 3: Get specific listing details by ID
+// =====================================================
+// Endpoint: GET /api/listings/:listingId
 exports.getListingById = async (req, res) => {
     try {
         const { listingId } = req.params;
-        console.log(`Fetching listing details for ListID: ${listingId}`);
+        console.log(`Fetching listing details for ID: ${listingId}`);
 
         let connection;
         try {
@@ -249,38 +217,43 @@ exports.getListingById = async (req, res) => {
         }
 
         try {
-            // Query to fetch specific listing with all details
+            // Query listing details with item info, seller info, and all media
             const query = `
                 SELECT
                     l.ListID,
                     l.ItemID,
                     l.UID as seller_uid,
+                    l.status,
+                    l.description as listing_description,
+                    l.available_from_date,
+                    l.expire_date,
+                    l.created_at as listing_created_at,
                     i.title,
                     i.description as item_description,
                     i.category,
                     i.condition,
                     i.original_price,
                     i.selling_price,
-                    l.status,
-                    l.description as listing_description,
-                    l.expire_date,
-                    l.available_from_date,
-                    u.UID as seller_uid,
+                    i.status as item_status,
                     u.name as seller_name,
                     u.email as seller_email,
                     u.phone as seller_phone,
                     m.MediaID as media_id,
-                    m.url as image_url,
                     m.media_type,
+                    m.url as image_url,
                     m.thumbnail_url,
                     m.alt_text,
-                    m.created_at as media_created_at
+                    m.created_at as media_created_at,
+                    mi.slot as image_slot,
+                    mv.duration_sec as video_duration
                 FROM Listing l
-                         JOIN Item i ON l.ItemID = i.ItemID
-                         JOIN User u ON l.UID = u.UID
-                         LEFT JOIN ListingMedia m ON l.ListID = m.ListID
-                WHERE l.ListID = ? AND l.status = 'active'
-                ORDER BY m.created_at ASC
+                JOIN Item i ON l.ItemID = i.ItemID
+                JOIN User u ON l.UID = u.UID
+                LEFT JOIN ListingMedia m ON l.ListID = m.ListID
+                LEFT JOIN ListingMedia_Image mi ON m.MediaID = mi.MediaID
+                LEFT JOIN ListingMedia_Video mv ON m.MediaID = mv.MediaID
+                WHERE l.ListID = ?
+                ORDER BY mi.slot ASC, m.created_at ASC
             `;
 
             const [rows] = await connection.execute(query, [listingId]);
@@ -308,7 +281,8 @@ exports.getListingById = async (req, res) => {
                 seller: {
                     uid: firstRow.seller_uid,
                     name: firstRow.seller_name,
-                    email: firstRow.seller_email
+                    email: firstRow.seller_email,
+                    phone: firstRow.seller_phone
                 },
                 images: [],
                 videos: [],
@@ -319,7 +293,6 @@ exports.getListingById = async (req, res) => {
                     listing_description: firstRow.listing_description
                 },
                 available_from_date: firstRow.available_from_date,
-                seller_phone: firstRow.seller_phone,
                 media: {
                     images: [],
                     videos: [],
@@ -343,10 +316,12 @@ exports.getListingById = async (req, res) => {
 
                     if (row.media_type === 'image') {
                         listing.images.push(row.image_url);
+                        mediaItem.slot = row.image_slot;
                         listing.media.images.push(mediaItem);
                     } else if (row.media_type === 'video') {
                         listing.videos.push(row.image_url);
-                        mediaItem.thumbnail = row.image_url;
+                        mediaItem.thumbnail = row.thumbnail_url;
+                        mediaItem.duration_sec = row.video_duration;
                         listing.media.videos.push(mediaItem);
                     }
                 }
@@ -384,8 +359,10 @@ exports.getListingById = async (req, res) => {
     }
 };
 
+// =====================================================
 // FUNCTION 4: Get all listings posted by a specific seller
-// No changes from original implementation
+// =====================================================
+// Endpoint: GET /api/listings/user/:userId
 exports.getUserListings = async (req, res) => {
     try {
         const { userId } = req.params;
@@ -402,7 +379,6 @@ exports.getUserListings = async (req, res) => {
         }
 
         try {
-            // Query to fetch all listings posted by a specific user
             const query = `
                 SELECT
                     l.ListID,
@@ -414,60 +390,33 @@ exports.getUserListings = async (req, res) => {
                     l.status,
                     l.expire_date,
                     u.name as seller_name,
-                    m.url as image_url
+                    (
+                        SELECT m.url
+                        FROM ListingMedia m
+                        LEFT JOIN ListingMedia_Image mi ON m.MediaID = mi.MediaID
+                        WHERE m.ListID = l.ListID AND m.media_type = 'image'
+                        ORDER BY mi.slot ASC, m.created_at ASC
+                        LIMIT 1
+                    ) as cover_image
                 FROM Listing l
                 JOIN Item i ON l.ItemID = i.ItemID
                 JOIN User u ON l.UID = u.UID
-                LEFT JOIN ListingMedia m ON l.ListID = m.ListID AND m.media_type = 'image'
                 WHERE l.UID = ?
-                ORDER BY l.created_at DESC, m.created_at ASC
+                ORDER BY l.created_at DESC
             `;
 
             const [rows] = await connection.execute(query, [userId]);
             connection.release();
 
-            // Group results by listing ID
-            const listingsMap = new Map();
-            rows.forEach(row => {
-                if (!listingsMap.has(row.ListID)) {
-                    listingsMap.set(row.ListID, {
-                        ListID: row.ListID,
-                        ItemID: row.ItemID,
-                        title: row.title,
-                        selling_price: parseFloat(row.selling_price),
-                        original_price: row.original_price ? parseFloat(row.original_price) : null,
-                        status: row.status,
-                        expire_date: row.expire_date,
-                        seller_uid: row.seller_uid,
-                        seller_name: row.seller_name,
-                        images: [],
-                        cover_image: null
-                    });
-                }
-                if (row.image_url) {
-                    listingsMap.get(row.ListID).images.push(row.image_url);
-                }
-            });
-
-            // Set cover_image to first image in array
-            listingsMap.forEach(listing => {
-                if (listing.images.length > 0) {
-                    listing.cover_image = listing.images[0];
-                }
-            });
-
-            const listings = Array.from(listingsMap.values());
-
             return res.status(200).json({
                 success: true,
-                message: 'User listings fetched successfully',
-                data: listings,
-                count: listings.length
+                data: rows,
+                count: rows.length
             });
 
         } catch (queryError) {
             connection.release();
-            console.error('Query error:', queryError);
+            console.error('Query error:', queryError.message);
             return res.status(503).json({
                 success: false,
                 message: 'Unable to fetch user listings'
@@ -482,3 +431,371 @@ exports.getUserListings = async (req, res) => {
         });
     }
 };
+
+// =====================================================
+// FUNCTION 5: Create a new listing with media files
+// =====================================================
+// Endpoint: POST /api/listings/create
+// Request Body (multipart/form-data):
+// - user_id: seller's UID
+// - title: item title
+// - category: item category
+// - condition: item condition (like_new, good, fair, poor)
+// - description: item description
+// - selling_price: asking price
+// - original_price: optional original price
+// - expire_date: listing expiration date
+// - condition_details: optional condition details
+// - images: array of image files
+// - video: optional video file
+exports.createListing = async (req, res) => {
+    // Extract uploaded files from multer middleware
+    const imageFiles = req.files?.images || [];
+    const videoFile = req.files?.video ? req.files.video[0] : null;
+
+    let connection;
+    let createdItemId = null;
+    let createdListId = null;
+    const createdMediaIds = [];
+
+    try {
+        // Extract form data from request body
+        const {
+            user_id,
+            title,
+            category,
+            condition,
+            description,
+            selling_price,
+            original_price,
+            expire_date,
+            condition_details
+        } = req.body;
+
+        console.log('Creating listing with data:', { user_id, title, category, condition });
+
+        // Validate required fields
+        if (!user_id || !title || !category || !condition || !description || !selling_price || !expire_date) {
+            // Delete uploaded files if validation fails
+            deleteUploadedFiles(imageFiles, videoFile);
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields'
+            });
+        }
+
+        // Validate at least 1 image is uploaded
+        if (imageFiles.length === 0) {
+            // Delete uploaded video if any
+            if (videoFile) {
+                fs.unlinkSync(videoFile.path);
+            }
+            return res.status(400).json({
+                success: false,
+                message: 'At least 1 image is required'
+            });
+        }
+
+        // Get database connection
+        try {
+            connection = await pool.getConnection();
+        } catch (dbError) {
+            deleteUploadedFiles(imageFiles, videoFile);
+            console.error('Database connection failed:', dbError.message);
+            return res.status(503).json({
+                success: false,
+                message: 'Unable to connect to the database'
+            });
+        }
+
+        try {
+            // Start transaction for atomic operation
+            await connection.beginTransaction();
+
+            // Step 1: Insert Item record
+            const insertItemQuery = `
+                INSERT INTO Item (
+                    UID, title, description, category, \`condition\`,
+                    original_price, selling_price, status,
+                    available_from_date, expire_date, post_date
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'available', CURDATE(), ?, NOW())
+            `;
+
+            const itemParams = [
+                user_id,
+                title.trim(),
+                description.trim(),
+                category.trim(),
+                condition,
+                original_price || null,
+                selling_price,
+                expire_date
+            ];
+
+            const [itemResult] = await connection.execute(insertItemQuery, itemParams);
+            createdItemId = itemResult.insertId;
+            console.log('Created Item with ID:', createdItemId);
+
+            // Step 2: Insert Listing record
+            const insertListingQuery = `
+                INSERT INTO Listing (
+                    UID, ItemID, status, description,
+                    available_from_date, expire_date, created_at
+                ) VALUES (?, ?, 'active', ?, CURDATE(), ?, NOW())
+            `;
+
+            const listingParams = [
+                user_id,
+                createdItemId,
+                condition_details || null,
+                expire_date
+            ];
+
+            const [listingResult] = await connection.execute(insertListingQuery, listingParams);
+            createdListId = listingResult.insertId;
+            console.log('Created Listing with ID:', createdListId);
+
+            // Step 3: Insert ListingMedia records for images
+            for (let i = 0; i < imageFiles.length; i++) {
+                const imageFile = imageFiles[i];
+                const imageUrl = `http://localhost:3000/api/images/${imageFile.filename}`;
+                const slot = i + 1;
+
+                // Insert into ListingMedia table
+                const insertMediaQuery = `
+                    INSERT INTO ListingMedia (
+                        ListID, media_type, url, thumbnail_url, alt_text, created_at
+                    ) VALUES (?, 'image', ?, NULL, ?, NOW())
+                `;
+
+                const mediaParams = [
+                    createdListId,
+                    imageUrl,
+                    `Image ${slot} of ${title.trim()}`
+                ];
+
+                const [mediaResult] = await connection.execute(insertMediaQuery, mediaParams);
+                const mediaId = mediaResult.insertId;
+                createdMediaIds.push(mediaId);
+
+                // Insert into ListingMedia_Image table
+                const insertImageQuery = `
+                    INSERT INTO ListingMedia_Image (MediaID, slot, width_px, heigh_px)
+                    VALUES (?, ?, NULL, NULL)
+                `;
+
+                await connection.execute(insertImageQuery, [mediaId, slot]);
+                console.log(`Created ListingMedia_Image with MediaID: ${mediaId}, slot: ${slot}`);
+            }
+
+            // Step 4: Insert ListingMedia record for video (if uploaded)
+            if (videoFile) {
+                const videoUrl = `http://localhost:3000/api/videos/${videoFile.filename}`;
+
+                // Insert into ListingMedia table
+                const insertVideoMediaQuery = `
+                    INSERT INTO ListingMedia (
+                        ListID, media_type, url, thumbnail_url, alt_text, created_at
+                    ) VALUES (?, 'video', ?, NULL, ?, NOW())
+                `;
+
+                const videoMediaParams = [
+                    createdListId,
+                    videoUrl,
+                    `Video of ${title.trim()}`
+                ];
+
+                const [videoMediaResult] = await connection.execute(insertVideoMediaQuery, videoMediaParams);
+                const videoMediaId = videoMediaResult.insertId;
+                createdMediaIds.push(videoMediaId);
+
+                // Insert into ListingMedia_Video table
+                const insertVideoQuery = `
+                    INSERT INTO ListingMedia_Video (MediaID, duration_sec, apt_no)
+                    VALUES (?, NULL, NULL)
+                `;
+
+                await connection.execute(insertVideoQuery, [videoMediaId]);
+                console.log(`Created ListingMedia_Video with MediaID: ${videoMediaId}`);
+            }
+
+            // Commit transaction
+            await connection.commit();
+            connection.release();
+
+            console.log('Listing created successfully');
+
+            return res.status(201).json({
+                success: true,
+                message: 'Listing created successfully',
+                data: {
+                    item_id: createdItemId,
+                    list_id: createdListId,
+                    media_count: createdMediaIds.length
+                }
+            });
+
+        } catch (queryError) {
+            // Rollback transaction on error
+            await connection.rollback();
+            connection.release();
+
+            // Delete uploaded files on database error
+            deleteUploadedFiles(imageFiles, videoFile);
+
+            console.error('Query error during listing creation:', queryError);
+            return res.status(503).json({
+                success: false,
+                message: 'Unable to create listing. Database error occurred.'
+            });
+        }
+
+    } catch (error) {
+        // Release connection if it exists
+        if (connection) {
+            try {
+                await connection.rollback();
+                connection.release();
+            } catch (releaseError) {
+                console.error('Error releasing connection:', releaseError);
+            }
+        }
+
+        // Delete uploaded files on unexpected error
+        deleteUploadedFiles(imageFiles, videoFile);
+
+        console.error('Unexpected error during listing creation:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error. Please try again.'
+        });
+    }
+};
+
+// =====================================================
+// FUNCTION 6: Get price reference data for similar sold items
+// =====================================================
+// Endpoint: GET /api/listings/price-reference
+// Query Parameters:
+// - category: item category to match
+// - condition: item condition to match
+// Returns: array of similar SOLD items with prices (privacy-safe)
+exports.getPriceReference = async (req, res) => {
+    try {
+        const { category, condition } = req.query;
+
+        // Validate required parameters
+        if (!category || !condition) {
+            return res.status(400).json({
+                success: false,
+                message: 'Category and condition are required'
+            });
+        }
+
+        console.log(`Fetching price reference for category: ${category}, condition: ${condition}`);
+
+        let connection;
+        try {
+            connection = await pool.getConnection();
+        } catch (dbError) {
+            return res.status(503).json({
+                success: false,
+                message: 'Unable to connect to the database'
+            });
+        }
+
+        try {
+            // Query to fetch SOLD items with matching category and condition
+            // Joins with Order table to get final transaction price
+            // Privacy-safe: Only returns item info and price, no seller/buyer details
+            const query = `
+                SELECT
+                    i.ItemID,
+                    i.title,
+                    i.category,
+                    i.condition,
+                    i.original_price,
+                    o.price as sold_price,
+                    (
+                        SELECT m.url
+                        FROM ListingMedia m
+                        LEFT JOIN ListingMedia_Image mi ON m.MediaID = mi.MediaID
+                        WHERE m.ListID = l.ListID AND m.media_type = 'image'
+                        ORDER BY mi.slot ASC, m.created_at ASC
+                        LIMIT 1
+                    ) as cover_image
+                FROM Item i
+                JOIN Listing l ON i.ItemID = l.ItemID
+                JOIN \`Order\` o ON l.ListID = o.ListID
+                WHERE i.category = ?
+                  AND i.condition = ?
+                  AND (l.status = 'Sold' OR o.status = 'COMPLETED')
+                ORDER BY o.created_at DESC
+                LIMIT 10
+            `;
+
+            const [rows] = await connection.execute(query, [category, condition]);
+            connection.release();
+
+            // Format response data
+            const referenceItems = rows.map(row => ({
+                ItemID: row.ItemID,
+                title: row.title,
+                category: row.category,
+                condition: row.condition,
+                original_price: row.original_price,
+                sold_price: row.sold_price,
+                cover_image: row.cover_image
+            }));
+
+            return res.status(200).json({
+                success: true,
+                message: 'Price reference fetched successfully',
+                data: referenceItems,
+                count: referenceItems.length
+            });
+
+        } catch (queryError) {
+            connection.release();
+            console.error('Query error:', queryError);
+            return res.status(503).json({
+                success: false,
+                message: 'Unable to fetch price reference'
+            });
+        }
+
+    } catch (error) {
+        console.error('Unexpected error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+};
+
+// =====================================================
+// HELPER FUNCTION: Delete uploaded files on error
+// =====================================================
+// Cleans up uploaded files when listing creation fails
+// Prevents orphan files from accumulating on disk
+function deleteUploadedFiles(imageFiles, videoFile) {
+    try {
+        // Delete image files
+        if (imageFiles && imageFiles.length > 0) {
+            imageFiles.forEach(file => {
+                if (fs.existsSync(file.path)) {
+                    fs.unlinkSync(file.path);
+                    console.log(`Deleted orphan image file: ${file.filename}`);
+                }
+            });
+        }
+
+        // Delete video file
+        if (videoFile && fs.existsSync(videoFile.path)) {
+            fs.unlinkSync(videoFile.path);
+            console.log(`Deleted orphan video file: ${videoFile.filename}`);
+        }
+    } catch (error) {
+        console.error('Error deleting uploaded files:', error);
+    }
+}

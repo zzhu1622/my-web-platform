@@ -6,6 +6,7 @@ import ResetPassword from '../components/auth/ResetPassword.vue';
 import LoginForm from '../components/auth/LoginForm.vue';
 import Home from '../pages/Home.vue';
 import Messages from '../pages/Messages.vue';
+import PostListing from '../pages/PostListing.vue';
 
 // ENHANCED COMPONENT IMPORTS (new for product detail page)
 // This component displays complete product information with media gallery
@@ -153,6 +154,16 @@ const router = createRouter({
       meta: {
         requiresAuth: true,
         title: 'My Orders - AptExchange'
+      }
+    },
+
+    {
+      path: '/post-listing',
+      name: 'PostListing',
+      component: PostListing,
+      meta: {
+        requiresAuth: true,
+        title: 'Post Listing - AptExchange'
       }
     }
   ]

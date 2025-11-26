@@ -488,8 +488,7 @@ const handleMenuClick = (action) => {
 
     case 'postlisting':
       // Route to post listing form where user can create new marketplace listing
-      // Reserved for later implementation
-      console.log('Navigating to Post Listing');
+      router.push('/post-listing');
       break;
 
     case 'logout':
