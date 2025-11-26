@@ -72,7 +72,7 @@
               My Orders
             </button>
 
-            <!-- Post Listing Option (New Feature) -->
+            <!-- Post Listing Option -->
             <button
               @click="handleMenuClick('postlisting')"
               class="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-2 transition duration-150 text-gray-900 border-t border-gray-200"
