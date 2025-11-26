@@ -859,7 +859,7 @@ const handleMenuClick = (action) => {
       break;
 
     case 'orders':
-      console.log('Navigating to My Orders');
+      router.push('/orders');
       break;
 
     case 'postlisting':

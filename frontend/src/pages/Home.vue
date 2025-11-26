@@ -483,9 +483,7 @@ const handleMenuClick = (action) => {
       break;
 
     case 'orders':
-      // Route to orders page where user can view purchase history
-      // Reserved for later implementation
-      console.log('Navigating to My Orders');
+      router.push('/orders');
       break;
 
     case 'postlisting':

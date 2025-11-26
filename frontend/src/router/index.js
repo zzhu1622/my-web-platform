@@ -11,6 +11,8 @@ import Messages from '../pages/Messages.vue';
 // This component displays complete product information with media gallery
 import Detail from '../components/Detail.vue';
 
+import Orders from '../pages/Orders.vue';
+
 // Create router instance with history mode
 // createWebHistory uses regular URL history (no hash #)
 const router = createRouter({
@@ -141,6 +143,16 @@ const router = createRouter({
         } else {
           next('/');
         }
+      }
+    },
+
+    {
+      path: '/orders',
+      name: 'Orders',
+      component: Orders,
+      meta: {
+        requiresAuth: true,
+        title: 'My Orders - AptExchange'
       }
     }
   ]

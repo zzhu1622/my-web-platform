@@ -53,4 +53,66 @@ router.get('/seller/:seller_uid', orderController.getSellerOrders);
 // Response: { success: boolean, order: object }
 router.get('/:order_id', orderController.getOrderById);
 
+// =====================================================
+// COMPLETE ORDER ROUTE
+// =====================================================
+// Endpoint: POST /api/orders/:order_id/complete
+// Purpose: Mark an order as completed (seller marks delivery)
+// Authentication: Required (only seller can complete)
+// URL Parameters: order_id - ID of the order
+// Request Body: { user_uid: number }
+// Response: { success: boolean, message: string }
+// Status Transition: PENDING -> COMPLETED
+// Side Effects:
+//   - Item status: reserved -> Sold
+//   - Listing status: reserved -> Sold
+router.post('/:order_id/complete', orderController.completeOrder);
+
+// =====================================================
+// REQUEST CANCEL ORDER ROUTE
+// =====================================================
+// Endpoint: POST /api/orders/:order_id/cancel/request
+// Purpose: Request cancellation of an order (buyer or seller can request)
+// Authentication: Required (buyer or seller)
+// URL Parameters: order_id - ID of the order
+// Request Body: { user_uid: number }
+// Response: { success: boolean, message: string }
+// Status Transitions:
+//   - If buyer requests: PENDING -> CANCEL_REQUESTED_BY_BUYER
+//   - If seller requests: PENDING -> CANCEL_REQUESTED_BY_SELLER
+// Note: Item and Listing remain in 'reserved' status until cancellation is accepted
+router.post('/:order_id/cancel/request', orderController.requestCancelOrder);
+
+// =====================================================
+// ACCEPT CANCEL ORDER ROUTE
+// =====================================================
+// Endpoint: POST /api/orders/:order_id/cancel/accept
+// Purpose: Accept a cancellation request from the other party
+// Authentication: Required (the OTHER party must accept)
+// URL Parameters: order_id - ID of the order
+// Request Body: { user_uid: number }
+// Response: { success: boolean, message: string }
+// Status Transitions:
+//   - If seller accepts buyer request: CANCEL_REQUESTED_BY_BUYER -> CANCELLED_BY_BUYER
+//   - If buyer accepts seller request: CANCEL_REQUESTED_BY_SELLER -> CANCELLED_BY_SELLER
+// Side Effects:
+//   - Item status: reserved -> available
+//   - Listing status: reserved -> active
+router.post('/:order_id/cancel/accept', orderController.acceptCancelOrder);
+
+// =====================================================
+// REJECT CANCEL ORDER ROUTE
+// =====================================================
+// Endpoint: POST /api/orders/:order_id/cancel/reject
+// Purpose: Reject a cancellation request from the other party
+// Authentication: Required (the OTHER party must reject)
+// URL Parameters: order_id - ID of the order
+// Request Body: { user_uid: number }
+// Response: { success: boolean, message: string }
+// Status Transitions:
+//   - If seller rejects buyer request: CANCEL_REQUESTED_BY_BUYER -> CANCEL_REJECTED_BY_SELLER
+//   - If buyer rejects seller request: CANCEL_REQUESTED_BY_SELLER -> CANCEL_REJECTED_BY_BUYER
+// Note: Item and Listing remain in 'reserved' status
+router.post('/:order_id/cancel/reject', orderController.rejectCancelOrder);
+
 module.exports = router;

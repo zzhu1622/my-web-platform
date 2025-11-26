@@ -24,6 +24,7 @@ const authRoutes = require('./routes/authRoutes');
 const listingRoutes = require('./routes/listingRoutes');
 const imageRoutes = require('./routes/imageRoutes');
 const messageRoutes = require('./routes/messageRoutes');
+const orderRoutes = require('./routes/orderRoutes');
 
 // ENHANCED ROUTE IMPORT (new for product detail page - video support)
 // This enables video streaming with range request support for efficient seeking
@@ -71,6 +72,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api/images', allowCrossOriginResources, express.static(imagesDir));
 app.use('/api/images', express.static(path.join(__dirname, '../../Database/photo')));
 app.use('/api/message-media', express.static(path.join(__dirname, '../Database/message-media')));
+app.use('/api/orders', orderRoutes);
 
 // Use session middleware if it's loaded
 // ORIGINAL MIDDLEWARE (maintained)
