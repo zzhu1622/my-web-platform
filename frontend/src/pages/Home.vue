@@ -108,14 +108,143 @@
         <p class="text-gray-600 mt-2">Browse second-hand items from your neighbors</p>
       </div>
 
+      <!-- Search and Filter Section -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+          <!-- Search Bar: Keyword search for item titles -->
+          <div class="md:col-span-2">
+            <label for="search" class="block text-sm font-medium text-gray-700 mb-2">
+              Search Items
+            </label>
+            <div class="relative">
+              <!-- Search Icon -->
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <!-- Search Input Field -->
+              <input
+                id="search"
+                v-model="searchKeyword"
+                type="text"
+                placeholder="Search by item name..."
+                class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                @input="handleSearchChange"
+              />
+            </div>
+          </div>
+
+          <!-- Category Filter Dropdown -->
+          <div>
+            <label for="category" class="block text-sm font-medium text-gray-700 mb-2">
+              Category
+            </label>
+            <select
+              id="category"
+              v-model="selectedCategory"
+              class="block w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+              @change="handleFilterChange"
+            >
+              <option value="">All Categories</option>
+              <option v-for="category in categories" :key="category" :value="category">
+                {{ category }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Sort Options Dropdown -->
+          <div>
+            <label for="sort" class="block text-sm font-medium text-gray-700 mb-2">
+              Sort By
+            </label>
+            <select
+              id="sort"
+              v-model="sortOption"
+              class="block w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+              @change="handleFilterChange"
+            >
+              <option value="newest">Newest First</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+              <option value="expire_near">Expiring Soon</option>
+              <option value="expire_far">Expiring Later</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Active Filters Display and Clear Button -->
+        <div v-if="hasActiveFilters" class="mt-4 flex items-center justify-between border-t border-gray-200 pt-4">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-sm text-gray-600">Active filters:</span>
+
+            <!-- Search Keyword Badge -->
+            <span v-if="searchKeyword" class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+              Search: "{{ searchKeyword }}"
+              <button @click="clearSearchKeyword" class="hover:text-blue-900">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </span>
+
+            <!-- Category Badge -->
+            <span v-if="selectedCategory" class="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+              Category: {{ selectedCategory }}
+              <button @click="clearCategory" class="hover:text-green-900">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </span>
+
+            <!-- Sort Option Badge -->
+            <span v-if="sortOption !== 'newest'" class="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
+              Sort: {{ getSortLabel(sortOption) }}
+              <button @click="clearSort" class="hover:text-purple-900">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </span>
+          </div>
+
+          <!-- Clear All Filters Button -->
+          <button
+            @click="clearAllFilters"
+            class="text-sm text-red-600 hover:text-red-700 font-medium"
+          >
+            Clear All
+          </button>
+        </div>
+      </div>
+
+      <!-- Results Count Display -->
+      <div v-if="!loading" class="mb-4">
+        <p class="text-sm text-gray-600">
+          Showing {{ listings.length }} {{ listings.length === 1 ? 'result' : 'results' }}
+        </p>
+      </div>
+
       <!-- Loading State: Shows while fetching data from database -->
       <div v-if="loading" class="flex justify-center items-center h-64">
         <div class="text-gray-500 text-lg">Loading listings...</div>
       </div>
 
-      <!-- Empty State: Shows when no listings exist in database -->
-      <div v-else-if="listings.length === 0" class="text-center py-12">
-        <p class="text-gray-500 text-lg">No listings available at the moment</p>
+      <!-- Empty State: Shows when no listings match the filters -->
+      <div v-else-if="listings.length === 0" class="text-center py-12 bg-white rounded-lg shadow-md">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <h3 class="mt-4 text-lg font-medium text-gray-900">No listings found</h3>
+        <p class="mt-2 text-gray-500">Try adjusting your search or filters to find what you're looking for.</p>
+        <button
+          @click="clearAllFilters"
+          class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200"
+        >
+          Clear Filters
+        </button>
       </div>
 
       <!-- Product Listings Grid: Displays all available products -->
@@ -162,6 +291,11 @@
             >
               {{ listing.title }}
             </h3>
+
+            <!-- Category Badge -->
+            <div class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium mb-2">
+              {{ listing.category }}
+            </div>
 
             <!-- Product Price: Highlighted in blue, clickable to view details -->
             <div
@@ -256,8 +390,9 @@
       </div>
     </footer>
 
-    <!-- Message Dialog Component: Floating chat window -->
+    <!-- Message Dialog Component: Floating chat window for seller contact -->
     <MessageDialog
+      v-if="messageDialogOpen"
       :is-open="messageDialogOpen"
       :seller-uid="selectedSeller.uid"
       :seller-name="selectedSeller.name"
@@ -270,7 +405,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import authService from '../services/authService';
 import listingService from '../services/listingService';
@@ -284,11 +419,25 @@ const user = ref(null);
 const showUserMenu = ref(false);
 const listings = ref([]);
 const loading = ref(true);
+const categories = ref([]);
+
+// Search and filter state variables
+const searchKeyword = ref('');
+const selectedCategory = ref('');
+const sortOption = ref('newest');
+
+// Debounce timer for search input to avoid excessive API calls
+let searchDebounceTimer = null;
 
 // Message dialog state
 const messageDialogOpen = ref(false);
 const selectedSeller = ref({ uid: 0, name: '' });
 const selectedProduct = ref(null);
+
+// Computed property: Check if any filters are currently active
+const hasActiveFilters = computed(() => {
+  return searchKeyword.value !== '' || selectedCategory.value !== '' || sortOption.value !== 'newest';
+});
 
 // Function: Calculate remaining days until listing expires
 // Used to show urgency badges on product cards
@@ -298,6 +447,19 @@ const daysRemaining = (expireDate) => {
   const timeDifference = expire - today;
   const daysRemaining = Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
   return Math.max(0, daysRemaining);
+};
+
+// Function: Get human-readable label for sort option
+// Converts sort option value to display text
+const getSortLabel = (option) => {
+  const labels = {
+    newest: 'Newest First',
+    price_asc: 'Price: Low to High',
+    price_desc: 'Price: High to Low',
+    expire_near: 'Expiring Soon',
+    expire_far: 'Expiring Later'
+  };
+  return labels[option] || option;
 };
 
 // Function: Handle user menu click events
@@ -407,8 +569,113 @@ const viewListingFromDialog = (listingId) => {
   }, 300);
 };
 
+// Function: Fetch listings from API with current filter settings
+// Constructs parameters object and calls listing service
+const fetchListings = async () => {
+  loading.value = true;
+
+  // Build parameters object from current filter state
+  const params = {};
+
+  // Add search keyword if present
+  if (searchKeyword.value.trim() !== '') {
+    params.searchKeyword = searchKeyword.value.trim();
+  }
+
+  // Add category filter if selected
+  if (selectedCategory.value !== '') {
+    params.category = selectedCategory.value;
+  }
+
+  // Parse sort option into sortBy and sortOrder parameters
+  // Each sort option corresponds to a specific field and direction
+  if (sortOption.value !== 'newest') {
+    switch (sortOption.value) {
+      case 'price_asc':
+        params.sortBy = 'price';
+        params.sortOrder = 'asc';
+        break;
+      case 'price_desc':
+        params.sortBy = 'price';
+        params.sortOrder = 'desc';
+        break;
+      case 'expire_near':
+        params.sortBy = 'expire_date';
+        params.sortOrder = 'asc';
+        break;
+      case 'expire_far':
+        params.sortBy = 'expire_date';
+        params.sortOrder = 'desc';
+        break;
+    }
+  }
+
+  console.log('Fetching listings with params:', params);
+
+  // Call listing service with parameters
+  const response = await listingService.getAllListings(params);
+
+  if (response.success) {
+    // Store listings in component state for display in template
+    listings.value = response.data;
+  } else {
+    // Log error message and set listings to empty array
+    console.error('Failed to fetch listings:', response.message);
+    listings.value = [];
+  }
+
+  // Stop loading animation once data is fetched and ready for display
+  loading.value = false;
+};
+
+// Function: Handle search input change with debouncing
+// Delays API call until user stops typing for 500ms
+const handleSearchChange = () => {
+  // Clear existing timer if user is still typing
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
+  }
+
+  // Set new timer to fetch listings after 500ms of inactivity
+  searchDebounceTimer = setTimeout(() => {
+    fetchListings();
+  }, 500);
+};
+
+// Function: Handle filter or sort option change
+// Immediately fetches listings with new filter settings
+const handleFilterChange = () => {
+  fetchListings();
+};
+
+// Function: Clear search keyword filter
+const clearSearchKeyword = () => {
+  searchKeyword.value = '';
+  fetchListings();
+};
+
+// Function: Clear category filter
+const clearCategory = () => {
+  selectedCategory.value = '';
+  fetchListings();
+};
+
+// Function: Clear sort option back to default
+const clearSort = () => {
+  sortOption.value = 'newest';
+  fetchListings();
+};
+
+// Function: Clear all filters and reset to default view
+const clearAllFilters = () => {
+  searchKeyword.value = '';
+  selectedCategory.value = '';
+  sortOption.value = 'newest';
+  fetchListings();
+};
+
 // Lifecycle Hook: Runs when component is mounted to DOM
-// Initializes component by loading user data and fetching listings
+// Initializes component by loading user data, categories, and fetching listings
 onMounted(async () => {
   // Retrieve user data from browser local storage to check login status
   const storedUser = localStorage.getItem('user');
@@ -422,20 +689,14 @@ onMounted(async () => {
     return;
   }
 
-  // Fetch all product listings from backend API using listing service
-  const response = await listingService.getAllListings();
-
-  if (response.success) {
-    // Store listings in component state for display in template
-    listings.value = response.data;
-  } else {
-    // Log error message and set listings to empty array
-    console.error('Failed to fetch listings:', response.message);
-    listings.value = [];
+  // Fetch all available categories from backend for filter dropdown
+  const categoriesResponse = await listingService.getCategories();
+  if (categoriesResponse.success) {
+    categories.value = categoriesResponse.data;
   }
 
-  // Stop loading animation once data is fetched and ready for display
-  loading.value = false;
+  // Fetch initial product listings with default settings
+  await fetchListings();
 });
 </script>
 

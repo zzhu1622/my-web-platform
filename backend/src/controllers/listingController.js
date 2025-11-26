@@ -1,10 +1,19 @@
 const pool = require('../config/database');
 
-// FUNCTION 1: Get all active listings with images and seller information
-// ENHANCEMENT: Added seller_uid for MessageDialog functionality
+// FUNCTION 1: Get all active listings with search, filter, and sort capabilities
+// ENHANCEMENT: Added support for keyword search, category filter, and sorting options
 exports.getAllListings = async (req, res) => {
     try {
-        console.log('Fetching all listings from database');
+        console.log('Fetching listings with filters from database');
+
+        // Extract query parameters from request
+        // searchKeyword: keyword to search in item title (case-insensitive partial match)
+        // category: filter listings by specific item category
+        // sortBy: determines sorting field (price or expire_date)
+        // sortOrder: determines sort direction (asc for ascending, desc for descending)
+        const { searchKeyword, category, sortBy, sortOrder } = req.query;
+
+        console.log('Applied filters:', { searchKeyword, category, sortBy, sortOrder });
 
         // Attempt to get database connection
         let connection;
@@ -18,14 +27,15 @@ exports.getAllListings = async (req, res) => {
         }
 
         try {
-            // SQL query to fetch listings with related information
-            // FIXED: Added l.UID as seller_uid for messaging functionality
-            const query = `
+            // Base SQL query to fetch listings with related information
+            // Joins Listing, Item, User, and ListingMedia tables
+            let query = `
                 SELECT
                     l.ListID,
                     l.ItemID,
                     l.UID as seller_uid,
                     i.title,
+                    i.category,
                     i.selling_price,
                     i.original_price,
                     l.status,
@@ -33,18 +43,70 @@ exports.getAllListings = async (req, res) => {
                     u.name as seller_name,
                     m.url as image_url
                 FROM Listing l
-                         JOIN Item i ON l.ItemID = i.ItemID
-                         JOIN User u ON l.UID = u.UID
-                         LEFT JOIN ListingMedia m ON l.ListID = m.ListID AND m.media_type = 'image'
+                JOIN Item i ON l.ItemID = i.ItemID
+                JOIN User u ON l.UID = u.UID
+                LEFT JOIN ListingMedia m ON l.ListID = m.ListID AND m.media_type = 'image'
                 WHERE l.status = 'active'
-                ORDER BY l.created_at DESC, m.created_at ASC
-                    LIMIT 50
             `;
 
-            const [rows] = await connection.execute(query);
+            // Array to store query parameters for prepared statement
+            const queryParams = [];
+
+            // Add search keyword filter if provided
+            // Uses LIKE operator with wildcards for partial matching
+            // Case-insensitive search on item title
+            if (searchKeyword && searchKeyword.trim() !== '') {
+                query += ` AND i.title LIKE ?`;
+                queryParams.push(`%${searchKeyword.trim()}%`);
+            }
+
+            // Add category filter if provided
+            // Exact match on category field
+            if (category && category.trim() !== '') {
+                query += ` AND i.category = ?`;
+                queryParams.push(category.trim());
+            }
+
+            // Determine sorting field and direction
+            // Default sort by created_at DESC if no sort parameters provided
+            let orderByClause = 'ORDER BY l.created_at DESC, m.created_at ASC';
+
+            if (sortBy && sortOrder) {
+                // Validate sortOrder to prevent SQL injection
+                const validSortOrder = sortOrder.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+                // Apply sorting based on sortBy parameter
+                switch (sortBy) {
+                    case 'price':
+                        // Sort by selling price (low to high or high to low)
+                        orderByClause = `ORDER BY i.selling_price ${validSortOrder}, l.created_at DESC, m.created_at ASC`;
+                        break;
+
+                    case 'expire_date':
+                        // Sort by expiration date (near to far or far to near)
+                        orderByClause = `ORDER BY l.expire_date ${validSortOrder}, l.created_at DESC, m.created_at ASC`;
+                        break;
+
+                    default:
+                        // Keep default sorting if sortBy is invalid
+                        break;
+                }
+            }
+
+            // Append ORDER BY clause and LIMIT to final query
+            query += ` ${orderByClause} LIMIT 50`;
+
+            console.log('Executing query:', query);
+            console.log('Query parameters:', queryParams);
+
+            // Execute query with parameters
+            const [rows] = await connection.execute(query, queryParams);
             connection.release();
 
+            console.log(`Retrieved ${rows.length} rows from database`);
+
             // Group images by listing ID for proper formatting
+            // Each listing can have multiple images, but we need to return each listing once
             const listingsMap = new Map();
             rows.forEach(row => {
                 if (!listingsMap.has(row.ListID)) {
@@ -52,6 +114,7 @@ exports.getAllListings = async (req, res) => {
                         ListID: row.ListID,
                         ItemID: row.ItemID,
                         title: row.title,
+                        category: row.category,
                         selling_price: parseFloat(row.selling_price),
                         original_price: row.original_price ? parseFloat(row.original_price) : null,
                         status: row.status,
@@ -68,20 +131,27 @@ exports.getAllListings = async (req, res) => {
                 }
             });
 
-            // Set cover_image to first image in array
+            // Set cover_image to first image in array for each listing
             listingsMap.forEach(listing => {
                 if (listing.images.length > 0) {
                     listing.cover_image = listing.images[0];
                 }
             });
 
+            // Convert Map to Array for JSON response
             const listings = Array.from(listingsMap.values());
 
             return res.status(200).json({
                 success: true,
                 message: 'Listings fetched successfully',
                 data: listings,
-                count: listings.length
+                count: listings.length,
+                filters: {
+                    searchKeyword: searchKeyword || null,
+                    category: category || null,
+                    sortBy: sortBy || null,
+                    sortOrder: sortOrder || null
+                }
             });
 
         } catch (queryError) {
@@ -102,7 +172,67 @@ exports.getAllListings = async (req, res) => {
     }
 };
 
-// FUNCTION 2: Get specific listing details by listing ID
+// FUNCTION 2: Get all unique categories from items in database
+// Used to populate category filter dropdown with actual categories
+exports.getCategories = async (req, res) => {
+    try {
+        console.log('Fetching all unique categories from database');
+
+        // Attempt to get database connection
+        let connection;
+        try {
+            connection = await pool.getConnection();
+        } catch (dbError) {
+            return res.status(503).json({
+                success: false,
+                message: 'Unable to connect to the database'
+            });
+        }
+
+        try {
+            // Query to get distinct categories from Item table
+            // Only includes categories from active listings
+            const query = `
+                SELECT DISTINCT i.category
+                FROM Item i
+                         JOIN Listing l ON i.ItemID = l.ItemID
+                WHERE l.status = 'active'
+                ORDER BY i.category ASC
+            `;
+
+            const [rows] = await connection.execute(query);
+            connection.release();
+
+            // Extract category values into simple array
+            const categories = rows.map(row => row.category);
+
+            return res.status(200).json({
+                success: true,
+                message: 'Categories fetched successfully',
+                data: categories,
+                count: categories.length
+            });
+
+        } catch (queryError) {
+            connection.release();
+            console.error('Query error:', queryError);
+            return res.status(503).json({
+                success: false,
+                message: 'Unable to fetch categories from database'
+            });
+        }
+
+    } catch (error) {
+        console.error('Unexpected error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+};
+
+// FUNCTION 3: Get specific listing details by listing ID
+// No changes from original implementation
 exports.getListingById = async (req, res) => {
     try {
         const { listingId } = req.params;
@@ -254,8 +384,8 @@ exports.getListingById = async (req, res) => {
     }
 };
 
-// FUNCTION 3: Get all listings posted by a specific seller
-// FIXED: Added seller_uid to query and response
+// FUNCTION 4: Get all listings posted by a specific seller
+// No changes from original implementation
 exports.getUserListings = async (req, res) => {
     try {
         const { userId } = req.params;
@@ -273,7 +403,6 @@ exports.getUserListings = async (req, res) => {
 
         try {
             // Query to fetch all listings posted by a specific user
-            // FIXED: Added l.UID as seller_uid
             const query = `
                 SELECT
                     l.ListID,
@@ -287,9 +416,9 @@ exports.getUserListings = async (req, res) => {
                     u.name as seller_name,
                     m.url as image_url
                 FROM Listing l
-                         JOIN Item i ON l.ItemID = i.ItemID
-                         JOIN User u ON l.UID = u.UID
-                         LEFT JOIN ListingMedia m ON l.ListID = m.ListID AND m.media_type = 'image'
+                JOIN Item i ON l.ItemID = i.ItemID
+                JOIN User u ON l.UID = u.UID
+                LEFT JOIN ListingMedia m ON l.ListID = m.ListID AND m.media_type = 'image'
                 WHERE l.UID = ?
                 ORDER BY l.created_at DESC, m.created_at ASC
             `;
