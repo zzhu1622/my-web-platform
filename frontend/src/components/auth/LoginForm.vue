@@ -1,77 +1,90 @@
 <template>
-  <div class="login-container">
-    <div class="login-box">
-      <h1 class="login-title">AptExchange</h1>
-      <p class="login-subtitle">Marketplace for residents living</p>
+  <!-- Main Page Container -->
+  <!-- Uses CSS Grid to create two-column layout: 2/3 for background, 1/3 for login form -->
+  <div class="login-page">
+    <!-- Left Section: Background Image Area -->
+    <!-- Occupies left 2/3 of the viewport width -->
+    <!-- Contains the decorative background image anchored to bottom -->
+    <div class="background-section">
+      <!-- Background image is applied via CSS background-image property -->
+      <!-- The image is centered horizontally and anchored to the bottom -->
+    </div>
 
-      <!-- Login Form -->
-      <form @submit.prevent="handleLogin">
-        <!-- Error Message Alert -->
-        <div v-if="errorMessage" class="alert alert-error">
-          <span class="alert-icon">Error:</span>
-          {{ errorMessage }}
-        </div>
+    <!-- Right Section: Login Form Area -->
+    <!-- Occupies right 1/3 of the viewport width -->
+    <!-- Contains the login box positioned in the upper portion -->
+    <div class="login-section">
+      <!-- Login Form Container -->
+      <!-- Positioned in upper-right area, centered within the right 1/3 column -->
+      <div class="login-box">
+        <h1 class="login-title">AptExchange</h1>
+        <p class="login-subtitle">Marketplace for residents living</p>
 
-        <!-- Success Message Alert -->
-        <div v-if="successMessage" class="alert alert-success">
-          <span class="alert-icon">Success:</span>
-          {{ successMessage }}
-        </div>
-
-        <!-- Identifier Input: Email or UID -->
-        <div class="form-group">
-          <label for="identifier">Email or UID</label>
-          <input
-            id="identifier"
-            v-model="identifier"
-            type="text"
-            placeholder="Enter your email or UID"
-            class="form-input"
-            required
-            :disabled="isLoading"
-          />
-        </div>
-
-        <!-- Password Input -->
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            placeholder="Enter your password"
-            class="form-input"
-            required
-            :disabled="isLoading"
-          />
-
-          <!-- Forgot Password Link -->
-          <!-- This link navigates to the forgot password page -->
-          <!-- Styled as blue link with hover effect -->
-          <!-- User clicks this to initiate password reset process -->
-          <div class="forgot-password-section">
-            <router-link to="/forgot-password" class="forgot-password-link">
-              Forgot your password?
-            </router-link>
+        <!-- Login Form -->
+        <form @submit.prevent="handleLogin">
+          <!-- Error Message Alert -->
+          <div v-if="errorMessage" class="alert alert-error">
+            <span class="alert-icon">Error:</span>
+            {{ errorMessage }}
           </div>
-        </div>
 
-        <!-- Login Button -->
-        <button
-          type="submit"
-          class="login-button"
-          :disabled="isLoading"
-        >
-          <span v-if="!isLoading">Login</span>
-          <span v-else>Logging in...</span>
-        </button>
-      </form>
+          <!-- Success Message Alert -->
+          <div v-if="successMessage" class="alert alert-success">
+            <span class="alert-icon">Success:</span>
+            {{ successMessage }}
+          </div>
 
-      <!-- Test Credentials Information Box -->
-      <div class="info-box">
-        <p><strong>Test Credentials:</strong></p>
-        <p>Email: alice.johnson@email.com</p>
-        <p>Password: password123</p>
+          <!-- Identifier Input: Email or UID -->
+          <div class="form-group">
+            <label for="identifier">Email or UID</label>
+            <input
+              id="identifier"
+              v-model="identifier"
+              type="text"
+              placeholder="Enter your email or UID"
+              class="form-input"
+              required
+              :disabled="isLoading"
+            />
+          </div>
+
+          <!-- Password Input -->
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input
+              id="password"
+              v-model="password"
+              type="password"
+              placeholder="Enter your password"
+              class="form-input"
+              required
+              :disabled="isLoading"
+            />
+
+            <!-- Forgot Password Link -->
+            <!-- This link navigates to the forgot password page -->
+            <!-- Styled as blue link with hover effect -->
+            <!-- User clicks this to initiate password reset process -->
+            <div class="forgot-password-section">
+              <router-link to="/forgot-password" class="forgot-password-link">
+                Forgot your password?
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Login Button -->
+          <button
+            type="submit"
+            class="login-button"
+            :disabled="isLoading"
+          >
+            <span v-if="!isLoading">Login</span>
+            <span v-else>Logging in...</span>
+          </button>
+        </form>
+
+        <!-- Test Credentials Information Box -->
+
       </div>
     </div>
   </div>
@@ -163,35 +176,116 @@ export default {
 </script>
 
 <style scoped>
-/* CSS Reset and Base Styles */
+/* =====================================================
+   CSS RESET AND BASE STYLES
+   ===================================================== */
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-/* Main Login Container */
-/* Full viewport height with gradient background */
-/* Flexbox centers login box both horizontally and vertically */
-.login-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+/* =====================================================
+   MAIN PAGE LAYOUT
+   Uses CSS Grid to create a two-column layout:
+   - Left column (2/3 width): Background image area
+   - Right column (1/3 width): Login form area
+   ===================================================== */
+
+.login-page {
+  display: grid;
+  /* Two columns: left takes 2fr (2/3), right takes 1fr (1/3) */
+  grid-template-columns: 2fr 1fr;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
-/* Login Box Container */
-/* White card with shadow and animation */
-/* Max-width ensures readability on large screens */
+/* =====================================================
+   LEFT SECTION: BACKGROUND IMAGE AREA
+   - Occupies left 2/3 of the page
+   - Background image anchored to bottom
+   - Image centered horizontally within this section
+   - Fallback solid color for uncovered areas
+   ===================================================== */
+
+.background-section {
+  /* Fallback background color when image does not cover entire area */
+  /* This color fills any space not covered by the image */
+  background-color: #f0f4f8;
+
+  /* Background image configuration */
+  /* Path uses the API route to fetch image from backend */
+  /* The imageController serves files from Database/Background directory */
+  /* Full URL: http://localhost:3000/api/images/background/Login-BG.jpg */
+  background-image: url('http://localhost:3000/api/images/background/Login-BG.jpg');
+
+  /* Prevent the image from repeating (tiling) */
+  background-repeat: no-repeat;
+
+  /* Position the image: centered horizontally, anchored to bottom */
+  /* 'center' aligns the image horizontally in the middle of the container */
+  /* 'bottom' anchors the image to the bottom edge of the viewport */
+  background-position: center bottom;
+
+  /* Image sizing: cover fills the entire area while maintaining aspect ratio */
+  /* Some parts of the image may be cropped if aspect ratios differ */
+  background-size: cover;
+
+  /* Ensure the section fills the full height of the viewport */
+  min-height: 100vh;
+
+  /* Position relative for any potential overlay elements */
+  position: relative;
+}
+
+/* =====================================================
+   RIGHT SECTION: LOGIN FORM AREA
+   - Occupies right 1/3 of the page
+   - Contains the login box
+   - Login box positioned in upper portion, centered horizontally
+   ===================================================== */
+
+.login-section {
+  /* Flexbox layout to position the login box */
+  display: flex;
+
+  /* Center the login box horizontally within this 1/3 column */
+  justify-content: center;
+
+  /* Center the login box vertically in the middle of the section */
+  /* Using 'center' places content at the vertical middle */
+  align-items: center;
+
+  /* Add horizontal padding for smaller screens */
+  padding-left: 30px;
+  padding-right: 30px;
+
+  /* Full viewport height to ensure proper vertical centering */
+  min-height: 100vh;
+
+  /* Background color for the login section */
+  /* Provides visual separation from the image section */
+  background-color: #ffffff;
+}
+
+/* =====================================================
+   LOGIN BOX CONTAINER
+   - White card with shadow and animation
+   - Centered within the right 1/3 column
+   - Fixed width for consistent appearance
+   ===================================================== */
+
 .login-box {
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  /* Increased padding for larger form appearance */
+  padding: 50px;
   width: 100%;
-  max-width: 400px;
+  /* Increased max-width for larger form */
+  max-width: 450px;
   animation: slideUp 0.5s ease-out;
 }
 
@@ -207,21 +301,25 @@ export default {
   }
 }
 
-/* Login Title Styling */
+/* =====================================================
+   LOGIN TITLE AND SUBTITLE
+   ===================================================== */
+
 .login-title {
-  font-size: 28px;
+  /* Increased font size for larger appearance */
+  font-size: 36px;
   font-weight: bold;
   color: #155dfc;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
   text-align: center;
 }
 
-/* Login Subtitle Styling */
 .login-subtitle {
-  font-size: 14px;
+  /* Increased font size for larger appearance */
+  font-size: 16px;
   color: #666;
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 35px;
 }
 
 /* =====================================================
@@ -279,7 +377,8 @@ export default {
 form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  /* Increased gap between form elements */
+  gap: 24px;
 }
 
 /* Form Group: Wraps label and input */
@@ -292,16 +391,19 @@ form {
 label {
   font-weight: 600;
   color: #333;
-  margin-bottom: 8px;
-  font-size: 14px;
+  margin-bottom: 10px;
+  /* Increased font size for labels */
+  font-size: 16px;
 }
 
 /* Form Inputs */
 .form-input {
-  padding: 12px 14px;
+  /* Increased padding for larger input fields */
+  padding: 14px 16px;
   border: 2px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: 8px;
+  /* Increased font size for input text */
+  font-size: 16px;
   font-family: inherit;
   transition: all 0.3s ease;
 }
@@ -344,7 +446,8 @@ label {
 .forgot-password-link {
   color: #667eea;
   text-decoration: none;
-  font-size: 13px;
+  /* Increased font size for better visibility */
+  font-size: 14px;
   font-weight: 500;
   transition: all 0.3s ease;
 }
@@ -366,16 +469,18 @@ label {
 
 /* Login Button */
 .login-button {
-  padding: 12px 16px;
+  /* Increased padding for larger button */
+  padding: 16px 20px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 16px;
+  border-radius: 8px;
+  /* Increased font size for button text */
+  font-size: 18px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 /* Button Hover State */
@@ -426,21 +531,70 @@ label {
    RESPONSIVE DESIGN
    ===================================================== */
 
-/* Mobile Devices (max 480px width) */
-@media (max-width: 480px) {
-  /* Reduce padding on mobile for smaller screens */
-  .login-box {
-    padding: 30px 20px;
+/* Tablet and smaller screens (max 1024px width) */
+/* Stack the layout vertically when screen is too narrow */
+@media (max-width: 1024px) {
+  .login-page {
+    /* Change to single column layout on smaller screens */
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
   }
 
-  /* Smaller title on mobile */
+  .background-section {
+    /* Reduce height of background section on smaller screens */
+    min-height: 30vh;
+    /* Hide background on very small screens to prioritize login form */
+    display: block;
+  }
+
+  .login-section {
+    /* Center the login box vertically on smaller screens */
+    align-items: center;
+    padding-top: 40px;
+    padding-bottom: 40px;
+    min-height: auto;
+    /* Add subtle background gradient for visual appeal */
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+  }
+}
+
+/* Mobile Devices (max 768px width) */
+@media (max-width: 768px) {
+  .background-section {
+    /* Further reduce background height on mobile */
+    min-height: 25vh;
+  }
+
+  .login-section {
+    padding-top: 30px;
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  .login-box {
+    padding: 30px 25px;
+    max-width: 100%;
+  }
+}
+
+/* Small Mobile Devices (max 480px width) */
+@media (max-width: 480px) {
+  .background-section {
+    /* Minimal background on very small screens */
+    min-height: 20vh;
+  }
+
+  .login-box {
+    padding: 25px 20px;
+  }
+
   .login-title {
     font-size: 24px;
   }
 
-  /* Add padding to container on mobile */
-  .login-container {
-    padding: 20px;
+  .login-subtitle {
+    font-size: 13px;
+    margin-bottom: 25px;
   }
 }
 </style>

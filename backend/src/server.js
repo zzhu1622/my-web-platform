@@ -20,6 +20,7 @@ const app = express();
 
 // Import routes BEFORE using them
 // ORIGINAL ROUTES (maintained)
+const backgroundPath = path.join(__dirname, '../Database/Background');
 const authRoutes = require('./routes/authRoutes');
 const listingRoutes = require('./routes/listingRoutes');
 const imageRoutes = require('./routes/imageRoutes');
@@ -58,6 +59,8 @@ const passwordResetRoutes = require('./routes/passwordResetRoutes');
 
 // Middleware
 // ORIGINAL MIDDLEWARE (maintained - no changes)
+app.use('/background', express.static(backgroundPath));
+
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   crossOriginEmbedderPolicy: false,
