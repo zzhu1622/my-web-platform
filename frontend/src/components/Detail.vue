@@ -323,12 +323,30 @@
               </div>
             </div>
 
-            <!-- Seller Information Card -->
-            <div class="bg-gray-50 rounded-lg p-4 mt-6">
-              <p class="text-gray-600 text-sm mb-3 font-medium">Seller Information</p>
+            <!-- Seller Information Card: Now Clickable -->
+            <!-- When clicked, navigates to the seller's profile page (Overview tab) -->
+            <div
+              @click="viewSellerProfile"
+              class="bg-gray-50 rounded-lg p-4 mt-6 cursor-pointer hover:bg-gray-100 transition duration-200 border border-transparent hover:border-blue-300 group"
+            >
+              <!-- Header with click indicator -->
+              <div class="flex items-center justify-between mb-3">
+                <p class="text-gray-600 text-sm font-medium">Seller Information</p>
+                <!-- Arrow icon indicating clickable card -->
+                <svg
+                  class="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition duration-200"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
 
               <!-- Seller name -->
-              <p class="font-semibold text-gray-900 text-lg mb-1">{{ listing.seller.name }}</p>
+              <p class="font-semibold text-gray-900 text-lg mb-1 group-hover:text-blue-600 transition duration-200">
+                {{ listing.seller.name }}
+              </p>
 
               <!-- Seller email with icon -->
               <div class="flex items-center gap-2 text-gray-700 mb-2">
@@ -339,12 +357,17 @@
               </div>
 
               <!-- Seller phone (if available) with icon -->
-              <div v-if="listing.seller.phone" class="flex items-center gap-2 text-gray-700">
+              <div v-if="listing.seller.phone" class="flex items-center gap-2 text-gray-700 mb-2">
                 <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
                 <span class="text-sm">{{ listing.seller.phone }}</span>
               </div>
+
+              <!-- View Profile hint text -->
+              <p class="text-xs text-blue-600 mt-2 group-hover:underline">
+                Click to view seller profile and reviews
+              </p>
             </div>
 
             <!-- Action Buttons: Message and Purchase -->
@@ -449,68 +472,53 @@
     <!-- Order Confirmation Dialog: Purchase flow with delivery method selection (NEW) -->
     <div
       v-if="orderDialogOpen"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
       @click.self="closeOrderDialog"
     >
-      <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-screen overflow-y-auto">
+      <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
 
         <!-- Dialog Header -->
-        <div class="bg-blue-600 text-white px-6 py-4 rounded-t-lg">
-          <div class="flex justify-between items-center">
-            <h2 class="text-xl font-bold">Confirm Your Purchase</h2>
-            <button
-              @click="closeOrderDialog"
-              class="text-white hover:text-gray-200 transition"
-            >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- Success State: Order Created Successfully -->
-        <div v-if="orderSuccess" class="p-8 text-center">
-          <div class="mb-6">
-            <svg class="w-20 h-20 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <h2 class="text-xl font-bold text-gray-900">Confirm Purchase</h2>
+          <button
+            @click="closeOrderDialog"
+            class="p-2 hover:bg-gray-100 rounded-full transition duration-200"
+          >
+            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
-          </div>
-          <h3 class="text-2xl font-bold text-gray-900 mb-2">Order Placed Successfully</h3>
-          <p class="text-gray-600 mb-4">
-            Your order has been confirmed and the item is now reserved for you.
-          </p>
-          <p class="text-sm text-gray-500 mb-6">
-            Order ID: <span class="font-mono font-medium">{{ createdOrderId }}</span>
-          </p>
-          <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-left">
-            <p class="text-green-800 text-sm font-medium mb-2">Next Steps:</p>
-            <ul class="text-green-700 text-sm space-y-1 list-disc list-inside">
-              <li>Contact the seller to arrange the delivery</li>
-              <li>Check your orders page for details</li>
-              <li>Complete the transaction as agreed</li>
-            </ul>
-          </div>
+          </button>
         </div>
 
-        <!-- Order Form: Delivery Method Selection -->
-        <div v-else class="p-6">
+        <!-- Dialog Content -->
+        <div class="p-6">
 
-          <!-- Order Summary Section -->
-          <div class="mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Order Summary</h3>
+          <!-- Success State -->
+          <div v-if="orderSuccess" class="text-center py-8">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">Order Placed Successfully</h3>
+            <p class="text-gray-600 mb-4">Your order #{{ createdOrderId }} has been created.</p>
+            <p class="text-sm text-gray-500">The seller will be notified and will contact you shortly.</p>
+          </div>
 
-            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <!-- Order Form -->
+          <div v-else>
+            <!-- Product Summary -->
+            <div class="bg-gray-50 rounded-lg p-4 mb-6">
               <div class="flex gap-4">
                 <!-- Product Image -->
-                <div class="w-20 h-20 flex-shrink-0">
+                <div class="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
                   <img
-                    v-if="allMediaItems[0]?.type === 'image'"
-                    :src="allMediaItems[0]?.url"
-                    :alt="listing?.title"
-                    class="w-full h-full object-cover rounded"
+                    v-if="allMediaItems.length > 0 && allMediaItems[0].type === 'image'"
+                    :src="allMediaItems[0].url"
+                    :alt="listing.title"
+                    class="w-full h-full object-cover"
                   />
-                  <div v-else class="w-full h-full bg-gray-300 rounded flex items-center justify-center">
+                  <div v-else class="w-full h-full flex items-center justify-center">
                     <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
@@ -518,184 +526,140 @@
                 </div>
 
                 <!-- Product Details -->
-                <div class="flex-1">
-                  <h4 class="font-semibold text-gray-900 mb-1">{{ listing?.title }}</h4>
-                  <p class="text-sm text-gray-600 mb-2">Seller: {{ listing?.seller?.name }}</p>
-                  <div class="flex items-baseline gap-2">
-                    <span class="text-2xl font-bold text-blue-600">${{ listing?.selling_price?.toFixed(2) }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Price Breakdown -->
-              <div class="mt-4 pt-4 border-t border-gray-300">
-                <div class="space-y-2 text-sm">
-                  <div class="flex justify-between">
-                    <span class="text-gray-600">Item Price:</span>
-                    <span class="font-medium text-gray-900">${{ listing?.selling_price?.toFixed(2) }}</span>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-gray-600">Tax (8%):</span>
-                    <span class="font-medium text-gray-900">${{ (listing?.selling_price * 0.08).toFixed(2) }}</span>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-gray-600">Platform Fee (5%):</span>
-                    <span class="font-medium text-gray-900">${{ (listing?.selling_price * 0.05).toFixed(2) }}</span>
-                  </div>
-                  <div class="flex justify-between pt-2 border-t border-gray-300">
-                    <span class="font-semibold text-gray-900">Total:</span>
-                    <span class="font-bold text-blue-600 text-lg">
-                      ${{ (listing?.selling_price * 1.13).toFixed(2) }}
-                    </span>
-                  </div>
+                <div class="flex-1 min-w-0">
+                  <h3 class="font-semibold text-gray-900 truncate">{{ listing.title }}</h3>
+                  <p class="text-sm text-gray-500">Seller: {{ listing.seller.name }}</p>
+                  <p class="text-lg font-bold text-blue-600 mt-1">${{ listing.selling_price.toFixed(2) }}</p>
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- Delivery Method Selection -->
-          <div class="mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-3">Select Delivery Method</h3>
-
-            <div class="space-y-3">
-              <!-- Option 1: Pick up at seller door -->
-              <label
-                :class="[
-                  'block p-4 border-2 rounded-lg cursor-pointer transition',
-                  selectedDeliveryMethod === 'Pick up at the seller door'
-                    ? 'border-blue-600 bg-blue-50'
-                    : 'border-gray-300 hover:border-gray-400'
-                ]"
-              >
-                <div class="flex items-start gap-3">
+            <!-- Delivery Method Selection -->
+            <div class="mb-6">
+              <h3 class="text-lg font-semibold text-gray-900 mb-3">Select Delivery Method</h3>
+              <div class="space-y-3">
+                <!-- Option: Meet in lobby -->
+                <label
+                  :class="[
+                    'flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition duration-200',
+                    selectedDeliveryMethod === 'Meet in lobby' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                  ]"
+                >
                   <input
                     type="radio"
+                    name="deliveryMethod"
+                    value="Meet in lobby"
                     v-model="selectedDeliveryMethod"
-                    value="Pick up at the seller door"
-                    class="mt-1"
+                    class="w-4 h-4 text-blue-600"
                   />
                   <div class="flex-1">
-                    <div class="font-medium text-gray-900">Pick up at the seller door</div>
-                    <div class="text-sm text-gray-600 mt-1">
-                      Arrange a time to pick up the item directly from the seller
-                    </div>
+                    <p class="font-medium text-gray-900">Meet in lobby</p>
+                    <p class="text-sm text-gray-500">Arrange to meet the seller in the building lobby</p>
                   </div>
-                </div>
-              </label>
+                </label>
 
-              <!-- Option 2: Delivered to your door -->
-              <label
-                :class="[
-                  'block p-4 border-2 rounded-lg cursor-pointer transition',
-                  selectedDeliveryMethod === 'Delivered to your door'
-                    ? 'border-blue-600 bg-blue-50'
-                    : 'border-gray-300 hover:border-gray-400'
-                ]"
-              >
-                <div class="flex items-start gap-3">
+                <!-- Option: Drop-off -->
+                <label
+                  :class="[
+                    'flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition duration-200',
+                    selectedDeliveryMethod === 'Drop-off' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                  ]"
+                >
                   <input
                     type="radio"
+                    name="deliveryMethod"
+                    value="Drop-off"
                     v-model="selectedDeliveryMethod"
-                    value="Delivered to your door"
-                    class="mt-1"
+                    class="w-4 h-4 text-blue-600"
                   />
                   <div class="flex-1">
-                    <div class="font-medium text-gray-900">Delivered to your door</div>
-                    <div class="text-sm text-gray-600 mt-1">
-                      Seller will deliver the item to your location
-                    </div>
+                    <p class="font-medium text-gray-900">Drop-off</p>
+                    <p class="text-sm text-gray-500">Seller will drop off at your door</p>
                   </div>
-                </div>
-              </label>
+                </label>
 
-              <!-- Option 3: Other methods with custom note -->
-              <label
-                :class="[
-                  'block p-4 border-2 rounded-lg cursor-pointer transition',
-                  selectedDeliveryMethod === 'Other methods'
-                    ? 'border-blue-600 bg-blue-50'
-                    : 'border-gray-300 hover:border-gray-400'
-                ]"
-              >
-                <div class="flex items-start gap-3">
+                <!-- Option: Other methods -->
+                <label
+                  :class="[
+                    'flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition duration-200',
+                    selectedDeliveryMethod === 'Other methods' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                  ]"
+                >
                   <input
                     type="radio"
-                    v-model="selectedDeliveryMethod"
+                    name="deliveryMethod"
                     value="Other methods"
-                    class="mt-1"
+                    v-model="selectedDeliveryMethod"
+                    class="w-4 h-4 text-blue-600"
                   />
                   <div class="flex-1">
-                    <div class="font-medium text-gray-900">Other methods</div>
-                    <div class="text-sm text-gray-600 mt-1">
-                      Specify your preferred delivery arrangement
-                    </div>
+                    <p class="font-medium text-gray-900">Other methods</p>
+                    <p class="text-sm text-gray-500">Specify custom delivery instructions</p>
                   </div>
-                </div>
-
-                <!-- Delivery Note Input: Only shown when "Other methods" is selected -->
-                <div v-if="selectedDeliveryMethod === 'Other methods'" class="mt-3 ml-6">
-                  <label class="block text-sm font-medium text-gray-700 mb-1">
-                    Delivery Instructions
-                  </label>
-                  <textarea
-                    v-model="deliveryNote"
-                    rows="3"
-                    maxlength="500"
-                    placeholder="e.g., Meet at building lobby at 3 PM"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  ></textarea>
-                  <div class="text-xs text-gray-500 mt-1 text-right">
-                    {{ deliveryNote.length }} / 500 characters
-                  </div>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <!-- Error Message Display -->
-          <div v-if="orderError" class="mb-6">
-            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div class="flex gap-2">
-                <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p class="text-sm text-red-700">{{ orderError }}</p>
+                </label>
               </div>
             </div>
+
+            <!-- Delivery Note (shown when "Other methods" is selected) -->
+            <div v-if="selectedDeliveryMethod === 'Other methods'" class="mb-6">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Delivery Instructions <span class="text-red-500">*</span>
+              </label>
+              <textarea
+                v-model="deliveryNote"
+                rows="3"
+                maxlength="500"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                placeholder="Please describe your preferred delivery method..."
+              ></textarea>
+              <p class="text-xs text-gray-500 mt-1">{{ deliveryNote.length }}/500 characters</p>
+            </div>
+
+            <!-- Error Message Display -->
+            <div v-if="orderError" class="mb-6">
+              <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div class="flex gap-2">
+                  <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p class="text-sm text-red-700">{{ orderError }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-3">
+              <button
+                @click="closeOrderDialog"
+                :disabled="orderSubmitting"
+                class="flex-1 px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                @click="submitOrder"
+                :disabled="orderSubmitting || !selectedDeliveryMethod"
+                class="flex-1 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <svg v-if="orderSubmitting" class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                {{ orderSubmitting ? 'Submitting...' : 'Confirm Purchase' }}
+              </button>
+            </div>
+
+            <!-- Additional Information -->
+            <div class="mt-6 bg-gray-50 rounded-lg p-4">
+              <p class="text-xs text-gray-600 leading-relaxed">
+                By confirming this purchase, you agree to complete the transaction according to the delivery method selected.
+                The seller will be notified of your order and will contact you to finalize the delivery arrangements.
+                Once the order is placed, the item will be reserved and removed from available listings.
+              </p>
+            </div>
           </div>
 
-          <!-- Action Buttons -->
-          <div class="flex gap-3">
-            <button
-              @click="closeOrderDialog"
-              :disabled="orderSubmitting"
-              class="flex-1 px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Cancel
-            </button>
-            <button
-              @click="submitOrder"
-              :disabled="orderSubmitting || !selectedDeliveryMethod"
-              class="flex-1 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              <svg v-if="orderSubmitting" class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              {{ orderSubmitting ? 'Submitting...' : 'Confirm Purchase' }}
-            </button>
-          </div>
-
-          <!-- Additional Information -->
-          <div class="mt-6 bg-gray-50 rounded-lg p-4">
-            <p class="text-xs text-gray-600 leading-relaxed">
-              By confirming this purchase, you agree to complete the transaction according to the delivery method selected.
-              The seller will be notified of your order and will contact you to finalize the delivery arrangements.
-              Once the order is placed, the item will be reserved and removed from available listings.
-            </p>
-          </div>
         </div>
-
       </div>
     </div>
   </div>
@@ -909,6 +873,28 @@ const viewListingFromDialog = (listingId) => {
 
   // Navigate to different listing
   router.push(`/listing/${listingId}`);
+};
+
+// Function: navigate to seller profile page (NEW)
+// This function is triggered when user clicks on the Seller Information card
+// It navigates to the seller's profile (Overview tab) with return path information
+const viewSellerProfile = () => {
+  // Get the seller's UID from the listing data
+  const sellerUid = listing.value.seller.uid;
+
+  // Get the current listing ID for return navigation
+  const currentListingId = route.params.listingId;
+
+  // Navigate to seller profile page with query parameters
+  // sellerId: the seller's user ID to display their profile
+  // returnTo: the listing page to return to when user clicks back button
+  router.push({
+    path: '/seller-profile',
+    query: {
+      sellerId: sellerUid,
+      returnTo: `/listing/${currentListingId}`
+    }
+  });
 };
 
 // Function: initiate purchase process by opening order confirmation dialog

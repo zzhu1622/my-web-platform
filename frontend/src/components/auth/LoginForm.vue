@@ -211,7 +211,7 @@ export default {
 .login-title {
   font-size: 28px;
   font-weight: bold;
-  color: #333;
+  color: #155dfc;
   margin-bottom: 5px;
   text-align: center;
 }

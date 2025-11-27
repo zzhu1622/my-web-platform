@@ -1,19 +1,36 @@
+// File: frontend/src/router/index.js
+// Purpose: Defines all client-side routes for the AptExchange application
+// Uses Vue Router for SPA (Single Page Application) navigation
+
 import { createRouter, createWebHistory } from 'vue-router';
 
-// ORIGINAL COMPONENT IMPORTS (maintained)
+// =====================================================
+// COMPONENT IMPORTS
+// =====================================================
+
+// Authentication Components
 import ForgotPassword from '../components/auth/ForgotPassword.vue';
 import ResetPassword from '../components/auth/ResetPassword.vue';
 import LoginForm from '../components/auth/LoginForm.vue';
+
+// Main Page Components
 import Home from '../pages/Home.vue';
 import Account from '../pages/Account.vue';
 import Messages from '../pages/Messages.vue';
 import PostListing from '../pages/PostListing.vue';
+import Orders from '../pages/Orders.vue';
 
-// ENHANCED COMPONENT IMPORTS (new for product detail page)
-// This component displays complete product information with media gallery
+// Product Detail Component
+// Displays complete product information with media gallery
 import Detail from '../components/Detail.vue';
 
-import Orders from '../pages/Orders.vue';
+// Seller Profile Component (NEW)
+// Displays seller's public profile (Overview tab) with return navigation
+import SellerProfile from '../pages/SellerProfile.vue';
+
+// =====================================================
+// ROUTER CONFIGURATION
+// =====================================================
 
 // Create router instance with history mode
 // createWebHistory uses regular URL history (no hash #)
@@ -23,66 +40,55 @@ const router = createRouter({
 
   // Define all application routes
   routes: [
-    // ORIGINAL ROUTES (maintained - no changes)
+    // =====================================================
+    // AUTHENTICATION ROUTES
+    // =====================================================
 
     // Login Page Route
-    // Existing login form component
+    // Entry point for unauthenticated users
     {
       path: '/login',
-
       name: 'Login',
-
       component: LoginForm,
-
       meta: {
         // This page is public (no authentication required)
         requiresAuth: false,
-
         // Page title for browser tab
         title: 'Login - AptExchange'
       }
     },
 
     // Forgot Password Route
-    // Allows users to reset forgotten passwords
+    // Allows users to initiate password reset process
     {
       path: '/forgot-password',
-
       name: 'ForgotPassword',
-
       component: ForgotPassword,
-
       meta: {
         requiresAuth: false,
-
-        // Page title for browser tab
         title: 'Forgot Password - AptExchange'
       }
     },
 
     // Reset Password Route
-    // Handles password reset with email verification
+    // Handles password reset with email verification code
+    // URL Parameter: email - User's email address for reset
     {
       path: '/reset-password/:email',
-
-      // Component name for debugging
       name: 'ResetPassword',
-
-      // Component to render for this route
-      // Component handles password validation and reset
       component: ResetPassword,
-
       meta: {
-
         requiresAuth: false,
-
-        // Page title for browser tab
         title: 'Reset Password - AptExchange'
       }
     },
 
+    // =====================================================
+    // MAIN APPLICATION ROUTES
+    // =====================================================
+
     // Home Page Route
-    // Displays all product listings
+    // Displays all product listings with search and filter options
     {
       path: '/home',
       name: 'Home',
@@ -94,30 +100,88 @@ const router = createRouter({
       }
     },
 
-    // ENHANCED ROUTE (new for product detail page)
+    // Product Detail Route
     // Displays detailed information about a specific product listing
-    // Includes images/videos, pricing, seller info, and descriptions
+    // URL Parameter: listingId - The unique ID of the listing to display
     {
       path: '/listing/:listingId',
-
-      // Component name for debugging and Vue DevTools
       name: 'ProductDetail',
-
-      // Dynamic import for code splitting (loads only when needed)
-      // This improves initial page load performance
       component: Detail,
-
       meta: {
-        // This page requires user to be authenticated
-        // Prevents unauthenticated users from viewing product details
+        // Requires authentication to view product details
         requiresAuth: true,
-
-        // Page title for browser tab
         title: 'Product Details - AptExchange'
       }
     },
 
-    // ORIGINAL ROUTES (maintained - no changes)
+    // Seller Profile Route (NEW)
+    // Displays a seller's public profile including ratings and reviews
+    // Query Parameters:
+    //   - sellerId: The UID of the seller to display
+    //   - returnTo: The path to return to when user clicks back button
+    {
+      path: '/seller-profile',
+      name: 'SellerProfile',
+      component: SellerProfile,
+      meta: {
+        // Requires authentication to view seller profiles
+        requiresAuth: true,
+        title: 'Seller Profile - AptExchange'
+      }
+    },
+
+    // Account Page Route
+    // User's personal account management page
+    // Includes: Overview, Personal Information, Listing Management tabs
+    {
+      path: '/account',
+      name: 'Account',
+      component: Account,
+      meta: {
+        requiresAuth: true,
+        title: 'My Account - AptExchange'
+      }
+    },
+
+    // Messages Page Route
+    // Displays all user conversations with buyers and sellers
+    {
+      path: '/messages',
+      name: 'Messages',
+      component: Messages,
+      meta: {
+        requiresAuth: true,
+        title: 'My Messages - AptExchange'
+      }
+    },
+
+    // Orders Page Route
+    // Displays purchase and sales orders for the user
+    {
+      path: '/orders',
+      name: 'Orders',
+      component: Orders,
+      meta: {
+        requiresAuth: true,
+        title: 'My Orders - AptExchange'
+      }
+    },
+
+    // Post Listing Route
+    // Form for creating new product listings
+    {
+      path: '/post-listing',
+      name: 'PostListing',
+      component: PostListing,
+      meta: {
+        requiresAuth: true,
+        title: 'Post Listing - AptExchange'
+      }
+    },
+
+    // =====================================================
+    // REDIRECT ROUTES
+    // =====================================================
 
     // Root path redirect
     // All unauthenticated users redirected to login
@@ -132,92 +196,40 @@ const router = createRouter({
     {
       path: '/:pathMatch(.*)*',
       redirect: '/login'
-    },
-    {
-      path: '/messages',
-      name: 'Messages',
-      component: Messages,
-      // Optional: Add route guard to ensure user is logged in
-      beforeEnter: (to, from, next) => {
-        const user = localStorage.getItem('user');
-        if (user) {
-          next();
-        } else {
-          next('/');
-        }
-      }
-    },
-
-    {
-      path: '/orders',
-      name: 'Orders',
-      component: Orders,
-      meta: {
-        requiresAuth: true,
-        title: 'My Orders - AptExchange'
-      }
-    },
-
-    {
-      path: '/post-listing',
-      name: 'PostListing',
-      component: PostListing,
-      meta: {
-        requiresAuth: true,
-        title: 'Post Listing - AptExchange'
-      }
-    },
-
-    {
-      path: '/account',
-      name: 'Account',
-      component: Account,
-      meta: {
-        requiresAuth: true,
-        title: 'My Account - AptExchange'
-      }
     }
   ]
 });
 
-// Check authentication requirements and set page titles
-// ORIGINAL NAVIGATION GUARD (maintained with enhanced comments)
+// =====================================================
+// NAVIGATION GUARDS
+// =====================================================
+
+// Global navigation guard to check authentication status
+// Runs before each route navigation
 router.beforeEach((to, from, next) => {
-  // Check if user is logged in by reading localStorage flag
-  // This flag is set during successful login and cleared on logout
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  // Check if route requires authentication
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
 
-  // Check if target route requires authentication
-  // Routes can specify requiresAuth in their meta property
-  const requiresAuth = to.meta.requiresAuth;
+  // Get user data from localStorage
+  const user = localStorage.getItem('user');
 
-  // Set page title from route meta
-  // Updates browser tab title to match current page
+  // Update document title based on route meta
   if (to.meta.title) {
     document.title = to.meta.title;
   }
 
-  // Authentication check logic
-  // ORIGINAL LOGIC (maintained)
-  if (requiresAuth && !isLoggedIn) {
-    // User trying to access protected route without login
+  // If route requires authentication and user is not logged in
+  if (requiresAuth && !user) {
     // Redirect to login page
     next('/login');
-  } else if (!requiresAuth && isLoggedIn && (to.path === '/login' || to.path === '/forgot-password')) {
-    // Logged-in user trying to access public pages (login/forgot-password)
+  } else if (!requiresAuth && user && to.path === '/login') {
+    // If user is already logged in and tries to access login page
     // Redirect to home page
     next('/home');
   } else {
-    // All other cases: allow navigation
+    // Allow navigation
     next();
   }
-});
-
-// ORIGINAL AFTER-NAVIGATION HOOK (maintained)
-// Scroll to top of page after navigation completes
-// This prevents user from being scrolled to middle of previous page
-router.afterEach((to, from) => {
-  window.scrollTo(0, 0);
 });
 
 export default router;
