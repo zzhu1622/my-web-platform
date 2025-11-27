@@ -526,13 +526,13 @@ Full product view with:
 
 For testing with sample data:
 
-| Email | Password |
-|-------|----------|
-| alice.johnson@email.com | password123 |
-| bob.smith@email.com | password123 |
-| carol.davis@email.com | password123 |
-| david.wilson@email.com | password123 |
-| emma.martinez@email.com | password123 |
+| UID | Email | Password |
+|-------|-------|----------|
+| 1 | alice.johnson@email.com | password123 |
+| 2 | bob.smith@email.com | password123 |
+| 3 | carol.davis@email.com | password123 |
+| 4 | david.wilson@email.com | password123 |
+| 5 | emma.martinez@email.com | password123 |
 
 ---
 
