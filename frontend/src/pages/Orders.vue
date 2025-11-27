@@ -740,7 +740,7 @@ const handleMenuClick = (action) => {
 
   switch (action) {
     case 'account':
-      console.log('Navigating to My Account');
+      router.push('/account');
       break;
     case 'messages':
       router.push('/messages');

@@ -472,9 +472,7 @@ const handleMenuClick = (action) => {
   // Process menu action based on selection and route accordingly
   switch (action) {
     case 'account':
-      // Route to account dashboard where user can manage profile information
-      // Reserved for later implementation
-      console.log('Navigating to My Account');
+      router.push('/account');
       break;
 
     case 'messages':

@@ -5,6 +5,7 @@ import ForgotPassword from '../components/auth/ForgotPassword.vue';
 import ResetPassword from '../components/auth/ResetPassword.vue';
 import LoginForm from '../components/auth/LoginForm.vue';
 import Home from '../pages/Home.vue';
+import Account from '../pages/Account.vue';
 import Messages from '../pages/Messages.vue';
 import PostListing from '../pages/PostListing.vue';
 
@@ -164,6 +165,16 @@ const router = createRouter({
       meta: {
         requiresAuth: true,
         title: 'Post Listing - AptExchange'
+      }
+    },
+
+    {
+      path: '/account',
+      name: 'Account',
+      component: Account,
+      meta: {
+        requiresAuth: true,
+        title: 'My Account - AptExchange'
       }
     }
   ]
