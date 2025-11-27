@@ -151,6 +151,7 @@ Automatically highlights listings with approaching expiration dates, helping buy
 |------|---------|
 | npm | Package management |
 | IntelliJ IDEA | IDE |
+| DBeaver | Database client (used to create/manage the MySQL database) |
 | Git/GitHub | Version control |
 
 ---
