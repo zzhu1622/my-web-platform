@@ -487,6 +487,7 @@ VITE_API_URL=http://localhost:3000/api
 
 ### Login Page
 The login page features a split-screen design with a background image on the left and the login form on the right.
+![alt text](https://github.com/zzhu1622/my-web-platform/blob/main/demo/Login-page.png)
 
 ### Home Page (Marketplace)
 The main marketplace displays product cards in a three-column grid layout with:
@@ -495,17 +496,20 @@ The main marketplace displays product cards in a three-column grid layout with:
 - Search bar with keyword filtering
 - Category dropdown filter
 - Sort options (Newest, Price, Expiring Soon)
+![alt text](https://github.com/zzhu1622/my-web-platform/blob/main/demo/Home-page.png)
 
 ### Post Listing Page
 Two-column layout with:
 - Left: Form fields for item details, media upload, and pricing
 - Right: Smart Price Suggestion panel showing similar sold items
+![alt text](https://github.com/zzhu1622/my-web-platform/blob/main/demo/Post-Listing-page.png)
 
 ### Messages Page
 Conversation list with:
 - Online/offline status indicators
 - Unread message badges
 - Product context in chat headers
+![alt text](https://github.com/zzhu1622/my-web-platform/blob/main/demo/Message-page.png)
 
 ### Product Detail Page
 Full product view with:
@@ -514,6 +518,7 @@ Full product view with:
 - Savings percentage
 - Seller information
 - Message seller button
+![alt text](https://github.com/zzhu1622/my-web-platform/blob/main/demo/Product-detail-page.png)
 
 ---
 
